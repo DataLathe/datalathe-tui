@@ -1,20 +1,26 @@
 {
-  "name": "datalathe-tui",
+  "name": "@datalathe/tui",
   "version": "1.0.0",
-  "description": "DataLathe Terminal UI Demo",
+  "description": "DataLathe Terminal UI",
   "type": "module",
   "main": "./dist/cli.js",
   "bin": {
     "datalathe-tui": "./dist/cli.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "dev": "tsc && node dist/cli.js",
     "build": "tsc",
     "lint": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@datalathe/client": "file:../datalathe-client-javascript",
+    "@datalathe/client": "^1.0.0",
     "@inkjs/ui": "^2.0.0",
     "ink": "^6.0.0",
     "react": "^19.0.0"
@@ -29,5 +35,18 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DataLathe/datalathe-tui.git"
+  },
+  "author": "DataLathe",
+  "keywords": [
+    "datalathe",
+    "tui",
+    "terminal",
+    "data",
+    "profiling"
+  ]
 }
