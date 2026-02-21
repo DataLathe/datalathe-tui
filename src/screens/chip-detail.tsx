@@ -12,6 +12,7 @@ interface ChipDetailScreenProps {
   checkedChipIds: string[];
   onQuery: (chipIds: string[]) => void;
   onBack: () => void;
+  isFocused: boolean;
 }
 
 export function ChipDetailScreen({
@@ -19,6 +20,7 @@ export function ChipDetailScreen({
   checkedChipIds,
   onQuery,
   onBack,
+  isFocused,
 }: ChipDetailScreenProps) {
   const client = useClient();
   const { data, loading, error, refetch } = useAsync(
@@ -32,7 +34,7 @@ export function ChipDetailScreen({
       const ids = [...new Set([chipId, ...checkedChipIds])];
       onQuery(ids);
     }
-  });
+  }, { isActive: isFocused });
 
   if (loading) {
     return <Spinner label="Loading chip details..." />;
