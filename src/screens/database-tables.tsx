@@ -13,6 +13,7 @@ interface DatabaseTablesScreenProps {
   databaseName: string;
   onCreateChip: (databaseName: string, tableName: string) => void;
   onBack: () => void;
+  isFocused: boolean;
 }
 
 function groupByTable(tables: DatabaseTable[]) {
@@ -29,6 +30,7 @@ export function DatabaseTablesScreen({
   databaseName,
   onCreateChip,
   onBack,
+  isFocused,
 }: DatabaseTablesScreenProps) {
   const { columns: termCols, rows: termRows } = useTerminalSize();
   const client = useClient();
@@ -51,7 +53,7 @@ export function DatabaseTablesScreen({
         : selectedTable;
       onCreateChip(databaseName, tableName);
     }
-  });
+  }, { isActive: isFocused });
 
   if (loading) {
     return <Spinner label={`Loading schema for ${databaseName}...`} />;
@@ -92,6 +94,7 @@ export function DatabaseTablesScreen({
           data={tableData}
           viewWidth={termCols - Math.min(50, Math.floor(termCols * 0.38)) - 4}
           viewHeight={termRows - 12}
+          isActive={isFocused}
         />
         <Box gap={2}>
           <Text color={brand.muted}>←:back to tables</Text>
@@ -112,10 +115,21 @@ export function DatabaseTablesScreen({
       <Text color={brand.cyan} bold>
         {databaseName} — Tables ({tables.size})
       </Text>
-      <Select
-        options={options}
-        onChange={(value) => setSelectedTable(value)}
-      />
+      {isFocused ? (
+        <Select
+          options={options}
+          onChange={(value) => setSelectedTable(value)}
+        />
+      ) : (
+        <Box flexDirection="column">
+          {options.map((opt) => (
+            <Text key={opt.value} color={brand.text}>
+              {"  "}{opt.label}{" "}
+              <Text color={brand.muted}>{opt.description}</Text>
+            </Text>
+          ))}
+        </Box>
+      )}
     </Box>
   );
 }

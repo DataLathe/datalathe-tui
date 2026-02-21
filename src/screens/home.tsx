@@ -6,6 +6,7 @@ import type { Screen } from "../hooks/use-navigation.js";
 
 interface HomeScreenProps {
   onNavigate: (screen: Screen) => void;
+  isFocused: boolean;
 }
 
 const menuItems = [
@@ -21,7 +22,7 @@ const menuItems = [
   },
 ];
 
-export function HomeScreen({ onNavigate }: HomeScreenProps) {
+export function HomeScreen({ onNavigate, isFocused }: HomeScreenProps) {
   return (
     <Box flexDirection="column" gap={1} paddingY={1}>
       <Text color={brand.cyan} bold>
@@ -34,10 +35,21 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
         <Text color={brand.violet} bold>
           Actions:
         </Text>
-        <Select
-          options={menuItems}
-          onChange={(value) => onNavigate(value as Screen)}
-        />
+        {isFocused ? (
+          <Select
+            options={menuItems}
+            onChange={(value) => onNavigate(value as Screen)}
+          />
+        ) : (
+          <Box flexDirection="column">
+            {menuItems.map((item) => (
+              <Text key={item.value} color={brand.text}>
+                {"  "}{item.label}{" "}
+                <Text color={brand.muted}>{item.description}</Text>
+              </Text>
+            ))}
+          </Box>
+        )}
       </Box>
     </Box>
   );

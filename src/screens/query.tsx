@@ -16,6 +16,7 @@ interface QueryScreenProps {
   defaultChipIds?: string[];
   onBack: () => void;
   onInputActive?: (active: boolean) => void;
+  isFocused: boolean;
 }
 
 function formatDate(epoch: number): string {
@@ -39,7 +40,7 @@ function chipLabel(
   return `${name}  [${table}]  ${created}`;
 }
 
-export function QueryScreen({ defaultChipIds, onBack, onInputActive }: QueryScreenProps) {
+export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }: QueryScreenProps) {
   const { columns: termCols, rows: termRows } = useTerminalSize();
   const client = useClient();
   const { data: chipsData, loading: chipsLoading, error: chipsError, refetch } =
@@ -107,6 +108,7 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive }: QueryScre
         setStep("select-chips");
       }
     },
+    { isActive: isFocused },
   );
 
   if (step === "select-chips") {
@@ -222,6 +224,7 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive }: QueryScre
           viewWidth={tableWidth}
           viewHeight={tableHeight}
           emptyMessage="Query returned no rows"
+          isActive={isFocused}
         />
       )}
       <Box gap={2}>
