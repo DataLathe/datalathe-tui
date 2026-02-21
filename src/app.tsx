@@ -83,10 +83,12 @@ export function App({ url }: AppProps) {
     [navigate, focusPanel],
   );
 
+  const mainFocused = activePanel === "main";
+
   function renderScreen() {
     switch (current.screen) {
       case "home":
-        return <HomeScreen onNavigate={(screen) => navigate(screen)} />;
+        return <HomeScreen onNavigate={(screen) => navigate(screen)} isFocused={mainFocused} />;
       case "database-tables":
         return (
           <DatabaseTablesScreen
@@ -95,6 +97,7 @@ export function App({ url }: AppProps) {
               navigate("create-chip", { initialSource: db, initialTable: table })
             }
             onBack={goBack}
+            isFocused={mainFocused}
           />
         );
       case "create-chip":
@@ -114,6 +117,7 @@ export function App({ url }: AppProps) {
             checkedChipIds={checkedChipIds}
             onQuery={(chipIds) => navigate("query", { queryChipIds: chipIds })}
             onBack={goBack}
+            isFocused={mainFocused}
           />
         );
       case "query":
@@ -125,10 +129,11 @@ export function App({ url }: AppProps) {
             }
             onBack={goHome}
             onInputActive={setInputActive}
+            isFocused={mainFocused}
           />
         );
       default:
-        return <HomeScreen onNavigate={(screen) => navigate(screen)} />;
+        return <HomeScreen onNavigate={(screen) => navigate(screen)} isFocused={mainFocused} />;
     }
   }
 

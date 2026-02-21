@@ -12,6 +12,8 @@ interface TableViewProps {
   /** Available row count for the table (header + separator + data rows + footer). */
   viewHeight?: number;
   emptyMessage?: string;
+  /** When false, keyboard input is ignored (e.g. panel not focused). Defaults to true. */
+  isActive?: boolean;
 }
 
 function truncate(s: string, max: number): string {
@@ -23,6 +25,7 @@ export function TableView({
   viewWidth = 80,
   viewHeight = 20,
   emptyMessage = "No data",
+  isActive = true,
 }: TableViewProps) {
   const [scrollX, setScrollX] = useState(0);
   const [scrollY, setScrollY] = useState(0);
@@ -96,7 +99,7 @@ export function TableView({
     } else if (key.pageDown) {
       setScrollY((y) => Math.min(maxScrollY, y + pageSize));
     }
-  });
+  }, { isActive });
 
   const page = Math.floor(clampedY / pageSize) + 1;
   const totalPages = Math.ceil(data.length / pageSize);
