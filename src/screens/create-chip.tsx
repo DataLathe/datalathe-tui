@@ -13,10 +13,12 @@ type Step =
   | "table"
   | "query"
   | "file-path"
+  | "chip-name"
   | "partition"
-  | "partition-by"
+  | "partition-mode"
   | "partition-query"
   | "partition-values"
+  | "confirm"
   | "creating"
   | "done";
 
@@ -26,10 +28,12 @@ const INPUT_ACTIVE_STEPS: Step[] = [
   "table",
   "query",
   "file-path",
+  "chip-name",
   "partition",
-  "partition-by",
+  "partition-mode",
   "partition-query",
   "partition-values",
+  "confirm",
 ];
 
 interface CreateChipScreenProps {
@@ -61,8 +65,17 @@ export function CreateChipScreen({
   const [partitionBy, setPartitionBy] = useState("");
   const [partitionQuery, setPartitionQuery] = useState("");
   const [partitionValues, setPartitionValues] = useState("");
+  const [chipName, setChipName] = useState("");
   const [chipId, setChipId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const getDefaultChipName = (): string => {
+    if (sourceType === "file") {
+      const fileName = filePath.split("/").pop() ?? filePath;
+      return fileName.replace(/\.[^.]+$/, "");
+    }
+    return tableName || source;
+  };
 
   const buildPartition = (): Partition | undefined => {
     if (!partitionBy) return undefined;
@@ -87,16 +100,17 @@ export function CreateChipScreen({
     const partition = buildPartition();
     try {
       let id: string;
+      const name = chipName || getDefaultChipName();
       if (sourceType === "file") {
-        id = await client.createChipFromFile(filePath, undefined, partition);
+        id = await client.createChipFromFile(filePath, undefined, partition, name);
       } else {
-        id = await client.createChip(source, query, tableName, partition);
+        id = await client.createChip(source, query, tableName, partition, name);
       }
       setChipId(id);
       setStep("done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create chip");
-      setStep("partition");
+      setStep("confirm");
     }
   };
 
@@ -163,7 +177,7 @@ export function CreateChipScreen({
               onSubmit={(v) => {
                 if (v.trim()) {
                   setQuery(v);
-                  setStep("partition");
+                  setStep("chip-name");
                 }
               }}
             />
@@ -175,8 +189,28 @@ export function CreateChipScreen({
       {step === "file-path" && (
         <Box flexDirection="column" gap={1}>
           <Text color={brand.text}>File path (Tab to complete):</Text>
-          <FilePathInput onSubmit={(p) => { setFilePath(p); setStep("partition"); }} />
+          <FilePathInput onSubmit={(p) => { setFilePath(p); setStep("chip-name"); }} />
           {error && <Text color={brand.error}>{error}</Text>}
+        </Box>
+      )}
+
+      {step === "chip-name" && (
+        <Box flexDirection="column" gap={1}>
+          <Text color={brand.text}>Chip name (Enter for default):</Text>
+          <Box>
+            <Text color={brand.violet}>{"❯ "}</Text>
+            <TextInput
+              placeholder={getDefaultChipName()}
+              onSubmit={(v) => {
+                if (v.trim()) {
+                  setChipName(v.trim());
+                } else {
+                  setChipName(getDefaultChipName());
+                }
+                setStep("partition");
+              }}
+            />
+          </Box>
         </Box>
       )}
 
@@ -190,9 +224,9 @@ export function CreateChipScreen({
               onSubmit={(v) => {
                 if (v.trim()) {
                   setPartitionBy(v.trim());
-                  setStep("partition-query");
+                  setStep("partition-mode");
                 } else {
-                  handleCreate();
+                  setStep("confirm");
                 }
               }}
             />
@@ -201,17 +235,44 @@ export function CreateChipScreen({
         </Box>
       )}
 
+      {step === "partition-mode" && (
+        <Box flexDirection="column" gap={1}>
+          <Text color={brand.muted}>Partition by: {partitionBy}</Text>
+          <Text color={brand.text}>How should partition values be determined?</Text>
+          <Select
+            options={[
+              { label: "Column only — no specific values", value: "column-only" },
+              { label: "Provide values — comma-separated list", value: "values" },
+              { label: "Use a query — SQL to derive values", value: "query" },
+            ]}
+            onChange={(value) => {
+              if (value === "column-only") {
+                setPartitionQuery("");
+                setPartitionValues("");
+                setStep("confirm");
+              } else if (value === "values") {
+                setPartitionQuery("");
+                setStep("partition-values");
+              } else {
+                setPartitionValues("");
+                setStep("partition-query");
+              }
+            }}
+          />
+        </Box>
+      )}
+
       {step === "partition-query" && (
         <Box flexDirection="column" gap={1}>
           <Text color={brand.muted}>Partition by: {partitionBy}</Text>
-          <Text color={brand.text}>Partition query (Enter to skip):</Text>
+          <Text color={brand.text}>Partition query (SQL to derive values):</Text>
           <Box>
             <Text color={brand.violet}>{"❯ "}</Text>
             <TextInput
-              placeholder="optional — SQL to derive partition values"
+              placeholder="SELECT DISTINCT col FROM table"
               onSubmit={(v) => {
                 if (v.trim()) setPartitionQuery(v.trim());
-                setStep("partition-values");
+                setStep("confirm");
               }}
             />
           </Box>
@@ -221,18 +282,96 @@ export function CreateChipScreen({
       {step === "partition-values" && (
         <Box flexDirection="column" gap={1}>
           <Text color={brand.muted}>Partition by: {partitionBy}</Text>
-          {partitionQuery && <Text color={brand.muted}>Partition query: {partitionQuery}</Text>}
-          <Text color={brand.text}>Partition values, comma-separated (Enter to skip):</Text>
+          <Text color={brand.text}>Partition values (comma-separated):</Text>
           <Box>
             <Text color={brand.violet}>{"❯ "}</Text>
             <TextInput
-              placeholder="optional — e.g. val1,val2,val3"
+              placeholder="val1, val2, val3"
               onSubmit={(v) => {
                 if (v.trim()) setPartitionValues(v.trim());
-                handleCreate();
+                setStep("confirm");
               }}
             />
           </Box>
+        </Box>
+      )}
+
+      {step === "confirm" && (
+        <Box flexDirection="column" gap={1}>
+          <Text color={brand.cyan} bold>─── Confirm Chip Settings ───</Text>
+          <Box flexDirection="column" paddingLeft={1}>
+            <Text>
+              <Text color={brand.muted}>Name        </Text>
+              <Text color={brand.text}>{chipName || getDefaultChipName()}</Text>
+            </Text>
+            <Text>
+              <Text color={brand.muted}>Source Type  </Text>
+              <Text color={brand.text}>{sourceType === "file" ? "File" : "Database"}</Text>
+            </Text>
+            {sourceType === "file" ? (
+              <Text>
+                <Text color={brand.muted}>File Path   </Text>
+                <Text color={brand.text}>{filePath}</Text>
+              </Text>
+            ) : (
+              <>
+                <Text>
+                  <Text color={brand.muted}>Database    </Text>
+                  <Text color={brand.text}>{source}</Text>
+                </Text>
+                <Text>
+                  <Text color={brand.muted}>Table       </Text>
+                  <Text color={brand.text}>{tableName}</Text>
+                </Text>
+                <Text>
+                  <Text color={brand.muted}>Query       </Text>
+                  <Text color={brand.text}>{query}</Text>
+                </Text>
+              </>
+            )}
+            {partitionBy ? (
+              <>
+                <Text color={brand.cyan} bold>{"\n"}Partition</Text>
+                <Text>
+                  <Text color={brand.muted}>Column      </Text>
+                  <Text color={brand.text}>{partitionBy}</Text>
+                </Text>
+                {partitionValues && (
+                  <Text>
+                    <Text color={brand.muted}>Values      </Text>
+                    <Text color={brand.text}>{partitionValues}</Text>
+                  </Text>
+                )}
+                {partitionQuery && (
+                  <Text>
+                    <Text color={brand.muted}>Query       </Text>
+                    <Text color={brand.text}>{partitionQuery}</Text>
+                  </Text>
+                )}
+              </>
+            ) : (
+              <Text>
+                <Text color={brand.muted}>Partition   </Text>
+                <Text color={brand.text}>None</Text>
+              </Text>
+            )}
+          </Box>
+          <Box marginTop={1}>
+            <Select
+              options={[
+                { label: "Create Chip", value: "create" },
+                { label: "Go Back", value: "back" },
+              ]}
+              onChange={(value) => {
+                if (value === "create") {
+                  handleCreate();
+                } else {
+                  setStep("partition");
+                }
+              }}
+            />
+          </Box>
+          {error && <Text color={brand.error}>{error}</Text>}
         </Box>
       )}
 
