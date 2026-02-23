@@ -1,6 +1,6 @@
 {
   "name": "@datalathe/tui",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "DataLathe Terminal UI",
   "type": "module",
   "main": "./dist/cli.js",
