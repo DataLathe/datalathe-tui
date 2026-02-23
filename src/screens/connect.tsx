@@ -5,6 +5,9 @@ import { DatalatheClient } from "@datalathe/client";
 import { AsciiLogo } from "../components/ascii-logo.js";
 import { brand } from "../theme.js";
 
+/** Request timeout in ms. Create-chip can take minutes. */
+const CLIENT_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+
 interface ConnectScreenProps {
   initialUrl: string;
   onConnect: (client: DatalatheClient, url: string) => void;
@@ -22,7 +25,7 @@ export function ConnectScreen({ initialUrl, onConnect }: ConnectScreenProps) {
     setError(null);
 
     try {
-      const client = new DatalatheClient(url);
+      const client = new DatalatheClient(url, { timeout: CLIENT_TIMEOUT_MS });
       await client.getDatabases();
       onConnect(client, url);
     } catch (err) {
