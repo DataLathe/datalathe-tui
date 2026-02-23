@@ -22,18 +22,15 @@ type Step =
   | "creating"
   | "done";
 
+/** Steps with TextInput or FilePathInput that consume letter keys. */
 const INPUT_ACTIVE_STEPS: Step[] = [
-  "choose-source",
-  "select-db",
   "table",
   "query",
   "file-path",
   "chip-name",
   "partition",
-  "partition-mode",
   "partition-query",
   "partition-values",
-  "confirm",
 ];
 
 interface CreateChipScreenProps {
