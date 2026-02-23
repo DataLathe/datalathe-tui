@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text, useInput } from "ink";
-import { TextInput, Spinner, MultiSelect } from "@inkjs/ui";
+import { TextInput, Spinner, MultiSelect, Select } from "@inkjs/ui";
 import { DatalatheResultSet } from "@datalathe/client";
 import type { ChipMetadata, Chip } from "@datalathe/client";
 import { useClient } from "../hooks/use-client.js";
@@ -10,7 +10,7 @@ import { TableView } from "../components/table-view.js";
 import { ErrorDisplay } from "../components/error-display.js";
 import { brand } from "../theme.js";
 
-type Step = "select-chips" | "sql" | "executing" | "results";
+type Step = "select-chips" | "transform-option" | "sql" | "executing" | "results";
 
 interface QueryScreenProps {
   defaultChipIds?: string[];
@@ -47,15 +47,18 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
     useAsync(() => client.listChips(), []);
 
   const initialIds = defaultChipIds && defaultChipIds.length > 0 ? defaultChipIds : [];
-  const [step, setStep] = useState<Step>(initialIds.length > 0 ? "sql" : "select-chips");
+  const [step, setStep] = useState<Step>(initialIds.length > 0 ? "transform-option" : "select-chips");
   const [selectedChipIds, setSelectedChipIds] = useState<string[]>(initialIds);
+  const [transformQuery, setTransformQuery] = useState(false);
+  const [transformedQuery, setTransformedQuery] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, unknown>[] | null>(null);
   const [resultInfo, setResultInfo] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
-  // Notify parent when text input is active
+  // Only mark TextInput steps as input-active (blocks global keys like 'b' and 'q').
+  // Select/MultiSelect steps use arrow keys and don't need this.
   useEffect(() => {
-    onInputActive?.(step === "sql" || step === "select-chips");
+    onInputActive?.(step === "sql");
     return () => onInputActive?.(false);
   }, [step, onInputActive]);
 
@@ -63,9 +66,16 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
     if (!query.trim()) return;
     setStep("executing");
     setError(null);
+    setTransformedQuery(null);
 
     try {
-      const reportResults = await client.generateReport(selectedChipIds, [query]);
+      const reportResults = await client.generateReport(
+        selectedChipIds,
+        [query],
+        undefined,
+        transformQuery || undefined,
+        transformQuery || undefined,
+      );
       const entry = reportResults.get(0);
 
       if (!entry) {
@@ -78,6 +88,10 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
         setError(entry.error);
         setStep("sql");
         return;
+      }
+
+      if (entry.transformed_query) {
+        setTransformedQuery(entry.transformed_query);
       }
 
       const rs = new DatalatheResultSet(entry);
@@ -104,7 +118,9 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
       }
       if (input === "c") {
         setResults(null);
+        setTransformedQuery(null);
         setSelectedChipIds([]);
+        setTransformQuery(false);
         setStep("select-chips");
       }
     },
@@ -150,8 +166,31 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
           onSubmit={(values) => {
             if (values.length > 0) {
               setSelectedChipIds(values);
-              setStep("sql");
+              setStep("transform-option");
             }
+          }}
+        />
+      </Box>
+    );
+  }
+
+  if (step === "transform-option") {
+    return (
+      <Box flexDirection="column" gap={1} paddingY={1}>
+        <Text color={brand.cyan} bold>
+          Query Transformation
+        </Text>
+        <Text color={brand.muted}>
+          Transform MySQL/MariaDB syntax to DuckDB before executing?
+        </Text>
+        <Select
+          options={[
+            { label: "No — run query as-is", value: "no" },
+            { label: "Yes — transform MySQL → DuckDB", value: "yes" },
+          ]}
+          onChange={(value) => {
+            setTransformQuery(value === "yes");
+            setStep("sql");
           }}
         />
       </Box>
@@ -186,7 +225,10 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
           })}
         </Box>
         <Box flexDirection="column" gap={1}>
-          <Text color={brand.text}>Enter SQL:</Text>
+          <Box gap={1}>
+            <Text color={brand.text}>Enter SQL:</Text>
+            {transformQuery && <Text color={brand.violet}>[transform: on]</Text>}
+          </Box>
           <Box>
             <Text color={brand.violet}>{"❯ "}</Text>
             <TextInput
@@ -218,6 +260,12 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
         Query Results
       </Text>
       <Text color={brand.muted}>{resultInfo}</Text>
+      {transformedQuery && (
+        <Box flexDirection="column">
+          <Text color={brand.violet} bold>Transformed query:</Text>
+          <Text color={brand.muted}>{transformedQuery}</Text>
+        </Box>
+      )}
       {results && (
         <TableView
           data={results}
