@@ -88,11 +88,16 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
     return () => onInputActive?.(false);
   }, [step, onInputActive]);
 
-  const handleExecute = async (query: string) => {
-    if (!query.trim()) return;
+  const handleExecute = async (rawQuery: string) => {
+    if (!rawQuery.trim()) return;
     setStep("executing");
     setError(null);
     setTransformedQuery(null);
+
+    // Auto-append LIMIT to prevent OOM on large result sets
+    const DEFAULT_LIMIT = 200;
+    const hasLimit = /\bLIMIT\s+\d+/i.test(rawQuery);
+    const query = hasLimit ? rawQuery : `${rawQuery.replace(/;\s*$/, "")} LIMIT ${DEFAULT_LIMIT}`;
 
     try {
       const reportResults = await client.generateReport(
@@ -126,8 +131,9 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
       setResults(rows);
       setResultSchema(schema);
       setShowMetadata(false);
+      const limitNote = !hasLimit && rows.length >= DEFAULT_LIMIT ? ` (limited to ${DEFAULT_LIMIT})` : "";
       setResultInfo(
-        `${schema.length} columns · ${rows.length} rows`,
+        `${schema.length} columns · ${rows.length} rows${limitNote}`,
       );
       setStep("results");
     } catch (err) {
