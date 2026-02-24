@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { execSync } from "child_process";
 import { Box, Text, useInput } from "ink";
 import { TextInput, Spinner, MultiSelect, Select } from "@inkjs/ui";
 import { DatalatheResultSet } from "@datalathe/client";
@@ -80,7 +81,17 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
   const [resultInfo, setResultInfo] = useState<string>("");
   const [showMetadata, setShowMetadata] = useState(false);
   const [timing, setTiming] = useState<ReportTiming | null>(null);
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const copyChipIds = useCallback(() => {
+    const json = JSON.stringify(selectedChipIds);
+    try {
+      execSync("pbcopy", { input: json });
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  }, [selectedChipIds]);
 
   // Only mark TextInput steps as input-active (blocks global keys like 'b' and 'q').
   // Select/MultiSelect steps use arrow keys and don't need this.
@@ -161,6 +172,9 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
         setSelectedChipIds([]);
         setTransformQuery(false);
         setStep("select-chips");
+      }
+      if (input === "y") {
+        copyChipIds();
       }
     },
     { isActive: isFocused },
@@ -375,7 +389,8 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
         )
       )}
       <Box gap={2}>
-        <Text color={brand.muted}>m:metadata  r:run another  c:change chips  b:back</Text>
+        <Text color={brand.muted}>m:metadata  r:run another  c:change chips  y:copy chip ids  b:back</Text>
+        {copied && <Text color={brand.success}>Copied!</Text>}
       </Box>
     </Box>
   );
