@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Box, Text, useInput } from "ink";
 import { TextInput, Spinner, MultiSelect, Select } from "@inkjs/ui";
 import { DatalatheResultSet } from "@datalathe/client";
-import type { ChipMetadata, Chip, SchemaField } from "@datalathe/client";
+import type { ChipMetadata, Chip, SchemaField, ReportTiming } from "@datalathe/client";
 import { useClient } from "../hooks/use-client.js";
 import { useAsync } from "../hooks/use-async.js";
 import { useTerminalSize } from "../hooks/use-terminal-size.js";
@@ -79,6 +79,7 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
   const [resultSchema, setResultSchema] = useState<SchemaField[]>([]);
   const [resultInfo, setResultInfo] = useState<string>("");
   const [showMetadata, setShowMetadata] = useState(false);
+  const [timing, setTiming] = useState<ReportTiming | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Only mark TextInput steps as input-active (blocks global keys like 'b' and 'q').
@@ -100,14 +101,15 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
     const query = hasLimit ? rawQuery : `${rawQuery.replace(/;\s*$/, "")} LIMIT ${DEFAULT_LIMIT}`;
 
     try {
-      const reportResults = await client.generateReport(
+      const report = await client.generateReport(
         selectedChipIds,
         [query],
         undefined,
         transformQuery || undefined,
         transformQuery || undefined,
       );
-      const entry = reportResults.get(0);
+      setTiming(report.timing);
+      const entry = report.results.get(0);
 
       if (!entry) {
         setError("No results returned");
@@ -340,6 +342,16 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
               </Text>
             ))}
           </Box>
+          {timing && (
+            <>
+              <Text color={brand.cyan} bold>Timing</Text>
+              <Box flexDirection="column">
+                <Text color={brand.muted}>  Total: {timing.total_ms}ms</Text>
+                <Text color={brand.muted}>  Chip attach: {timing.chip_attach_ms}ms</Text>
+                <Text color={brand.muted}>  Query execution: {timing.query_execution_ms}ms</Text>
+              </Box>
+            </>
+          )}
           {selectedChipIds.length > 0 && (
             <>
               <Text color={brand.cyan} bold>Chips</Text>
