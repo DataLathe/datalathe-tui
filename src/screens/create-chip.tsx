@@ -18,6 +18,7 @@ type Step =
   | "partition-mode"
   | "partition-query"
   | "partition-values"
+  | "column-replace"
   | "confirm"
   | "creating"
   | "done";
@@ -31,6 +32,7 @@ const INPUT_ACTIVE_STEPS: Step[] = [
   "partition",
   "partition-query",
   "partition-values",
+  "column-replace",
 ];
 
 interface CreateChipScreenProps {
@@ -63,6 +65,7 @@ export function CreateChipScreen({
   const [partitionQuery, setPartitionQuery] = useState("");
   const [partitionValues, setPartitionValues] = useState("");
   const [chipName, setChipName] = useState("");
+  const [columnReplaceInput, setColumnReplaceInput] = useState("");
   const [chipId, setChipId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,6 +87,16 @@ export function CreateChipScreen({
     return p;
   };
 
+  const buildColumnReplace = (): Record<string, string> | undefined => {
+    if (!columnReplaceInput.trim()) return undefined;
+    const map: Record<string, string> = {};
+    for (const pair of columnReplaceInput.split(",")) {
+      const [old, newName] = pair.split("=").map((s) => s.trim());
+      if (old && newName) map[old] = newName;
+    }
+    return Object.keys(map).length > 0 ? map : undefined;
+  };
+
   useEffect(() => {
     onInputActive?.(INPUT_ACTIVE_STEPS.includes(step));
     return () => onInputActive?.(false);
@@ -95,13 +108,14 @@ export function CreateChipScreen({
     setStep("creating");
     setError(null);
     const partition = buildPartition();
+    const columnReplace = buildColumnReplace();
     try {
       let id: string;
       const name = chipName || getDefaultChipName();
       if (sourceType === "file") {
-        id = await client.createChipFromFile(filePath, undefined, partition, name);
+        id = await client.createChipFromFile(filePath, undefined, partition, name, columnReplace);
       } else {
-        id = await client.createChip(source, query, tableName, partition, name);
+        id = await client.createChip(source, query, tableName, partition, name, columnReplace);
       }
       setChipId(id);
       setStep("done");
@@ -223,7 +237,7 @@ export function CreateChipScreen({
                   setPartitionBy(v.trim());
                   setStep("partition-mode");
                 } else {
-                  setStep("confirm");
+                  setStep("column-replace");
                 }
               }}
             />
@@ -246,7 +260,7 @@ export function CreateChipScreen({
               if (value === "column-only") {
                 setPartitionQuery("");
                 setPartitionValues("");
-                setStep("confirm");
+                setStep("column-replace");
               } else if (value === "values") {
                 setPartitionQuery("");
                 setStep("partition-values");
@@ -269,7 +283,7 @@ export function CreateChipScreen({
               placeholder="SELECT DISTINCT col FROM table"
               onSubmit={(v) => {
                 if (v.trim()) setPartitionQuery(v.trim());
-                setStep("confirm");
+                setStep("column-replace");
               }}
             />
           </Box>
@@ -286,6 +300,23 @@ export function CreateChipScreen({
               placeholder="val1, val2, val3"
               onSubmit={(v) => {
                 if (v.trim()) setPartitionValues(v.trim());
+                setStep("column-replace");
+              }}
+            />
+          </Box>
+        </Box>
+      )}
+
+      {step === "column-replace" && (
+        <Box flexDirection="column" gap={1}>
+          <Text color={brand.text}>Column replace (Enter to skip):</Text>
+          <Text color={brand.muted}>Format: old1=new1, old2=new2</Text>
+          <Box>
+            <Text color={brand.violet}>{"❯ "}</Text>
+            <TextInput
+              placeholder="optional"
+              onSubmit={(v) => {
+                if (v.trim()) setColumnReplaceInput(v.trim());
                 setStep("confirm");
               }}
             />
@@ -349,6 +380,17 @@ export function CreateChipScreen({
             ) : (
               <Text>
                 <Text color={brand.muted}>Partition   </Text>
+                <Text color={brand.text}>None</Text>
+              </Text>
+            )}
+            {columnReplaceInput ? (
+              <Text>
+                <Text color={brand.muted}>Col Replace </Text>
+                <Text color={brand.text}>{columnReplaceInput}</Text>
+              </Text>
+            ) : (
+              <Text>
+                <Text color={brand.muted}>Col Replace </Text>
                 <Text color={brand.text}>None</Text>
               </Text>
             )}
