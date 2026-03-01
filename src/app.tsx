@@ -13,6 +13,7 @@ import { DatabaseTablesScreen } from "./screens/database-tables.js";
 import { CreateChipScreen } from "./screens/create-chip.js";
 import { ChipDetailScreen } from "./screens/chip-detail.js";
 import { QueryScreen } from "./screens/query.js";
+import { DeleteChipScreen } from "./screens/delete-chip.js";
 import { brand } from "./theme.js";
 
 const SCREEN_TITLES: Record<string, string> = {
@@ -22,6 +23,7 @@ const SCREEN_TITLES: Record<string, string> = {
   "create-chip": "Create Chip",
   "chip-detail": "Chip Detail",
   query: "Query Chips",
+  "delete-chip": "Delete Chip",
 };
 
 interface AppProps {
@@ -126,6 +128,17 @@ export function App({ url }: AppProps) {
             onQuery={(chipIds) => navigate("query", { queryChipIds: chipIds })}
             onBack={goBack}
             onDeleted={handleChipDeleted}
+            isFocused={mainFocused}
+          />
+        );
+      case "delete-chip":
+        return (
+          <DeleteChipScreen
+            onDone={() => {
+              setSidebarRefreshKey((k) => k + 1);
+              goHome();
+            }}
+            onBack={goBack}
             isFocused={mainFocused}
           />
         );
