@@ -15,6 +15,7 @@ interface SidebarProps {
   onCheckedChipIdsChange: (chipIds: string[]) => void;
   onSelectTable: (databaseName: string, tableName: string) => void;
   onSelectChip: (chipId: string) => void;
+  refreshKey?: number;
 }
 
 export function Sidebar({
@@ -26,6 +27,7 @@ export function Sidebar({
   onCheckedChipIdsChange,
   onSelectTable,
   onSelectChip,
+  refreshKey,
 }: SidebarProps) {
   const dbFocused = activePanel === "databases";
   const chipsFocused = activePanel === "chips";
@@ -93,6 +95,7 @@ export function Sidebar({
             onCheckedChange={onCheckedChipIdsChange}
             onSelectChip={onSelectChip}
             height={chipsHeight}
+            refreshKey={refreshKey}
           />
         </Box>
       </Box>
