@@ -5,7 +5,7 @@ import { useClient } from "../hooks/use-client.js";
 import { useAsync } from "../hooks/use-async.js";
 import { FilePathInput } from "../components/file-path-input.js";
 import { brand } from "../theme.js";
-import type { DuckDBDatabase, Partition } from "@datalathe/client";
+import type { DuckDBDatabase, Partition, S3StorageConfig } from "@datalathe/client";
 
 type Step =
   | "choose-source"
@@ -19,6 +19,10 @@ type Step =
   | "partition-query"
   | "partition-values"
   | "column-replace"
+  | "storage-config"
+  | "storage-bucket"
+  | "storage-prefix"
+  | "storage-ttl"
   | "confirm"
   | "creating"
   | "done";
@@ -33,6 +37,9 @@ const INPUT_ACTIVE_STEPS: Step[] = [
   "partition-query",
   "partition-values",
   "column-replace",
+  "storage-bucket",
+  "storage-prefix",
+  "storage-ttl",
 ];
 
 interface CreateChipScreenProps {
@@ -66,6 +73,9 @@ export function CreateChipScreen({
   const [partitionValues, setPartitionValues] = useState("");
   const [chipName, setChipName] = useState("");
   const [columnReplaceInput, setColumnReplaceInput] = useState("");
+  const [storageBucket, setStorageBucket] = useState("");
+  const [storagePrefix, setStoragePrefix] = useState("");
+  const [storageTtl, setStorageTtl] = useState("");
   const [chipId, setChipId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,6 +95,18 @@ export function CreateChipScreen({
       p.partition_values = partitionValues.split(",").map((v) => v.trim()).filter(Boolean);
     }
     return p;
+  };
+
+  const buildStorageConfig = (): S3StorageConfig | undefined => {
+    if (!storageBucket && !storagePrefix && !storageTtl) return undefined;
+    const config: S3StorageConfig = {};
+    if (storageBucket) config.bucket = storageBucket;
+    if (storagePrefix) config.key_prefix = storagePrefix;
+    if (storageTtl) {
+      const days = parseInt(storageTtl, 10);
+      if (!isNaN(days) && days > 0) config.ttl_days = days;
+    }
+    return Object.keys(config).length > 0 ? config : undefined;
   };
 
   const buildColumnReplace = (): Record<string, string> | undefined => {
@@ -109,13 +131,14 @@ export function CreateChipScreen({
     setError(null);
     const partition = buildPartition();
     const columnReplace = buildColumnReplace();
+    const storageConfig = buildStorageConfig();
     try {
       let id: string;
       const name = chipName || getDefaultChipName();
       if (sourceType === "file") {
-        id = await client.createChipFromFile(filePath, undefined, partition, name, columnReplace);
+        id = await client.createChipFromFile(filePath, undefined, partition, name, columnReplace, storageConfig);
       } else {
-        id = await client.createChip(source, query, tableName, partition, name, columnReplace);
+        id = await client.createChip(source, query, tableName, partition, name, columnReplace, storageConfig);
       }
       setChipId(id);
       setStep("done");
@@ -317,6 +340,73 @@ export function CreateChipScreen({
               placeholder="optional"
               onSubmit={(v) => {
                 if (v.trim()) setColumnReplaceInput(v.trim());
+                setStep("storage-config");
+              }}
+            />
+          </Box>
+        </Box>
+      )}
+
+      {step === "storage-config" && (
+        <Box flexDirection="column" gap={1}>
+          <Text color={brand.text}>Configure S3 storage?</Text>
+          <Select
+            options={[
+              { label: "No — use defaults", value: "no" },
+              { label: "Yes — custom bucket/prefix/TTL", value: "yes" },
+            ]}
+            onChange={(value) => {
+              if (value === "yes") {
+                setStep("storage-bucket");
+              } else {
+                setStep("confirm");
+              }
+            }}
+          />
+        </Box>
+      )}
+
+      {step === "storage-bucket" && (
+        <Box flexDirection="column" gap={1}>
+          <Text color={brand.text}>S3 bucket (Enter to skip):</Text>
+          <Box>
+            <Text color={brand.violet}>{"❯ "}</Text>
+            <TextInput
+              placeholder="my-bucket"
+              onSubmit={(v) => {
+                if (v.trim()) setStorageBucket(v.trim());
+                setStep("storage-prefix");
+              }}
+            />
+          </Box>
+        </Box>
+      )}
+
+      {step === "storage-prefix" && (
+        <Box flexDirection="column" gap={1}>
+          <Text color={brand.text}>S3 key prefix (Enter to skip):</Text>
+          <Box>
+            <Text color={brand.violet}>{"❯ "}</Text>
+            <TextInput
+              placeholder="chips/project-a/"
+              onSubmit={(v) => {
+                if (v.trim()) setStoragePrefix(v.trim());
+                setStep("storage-ttl");
+              }}
+            />
+          </Box>
+        </Box>
+      )}
+
+      {step === "storage-ttl" && (
+        <Box flexDirection="column" gap={1}>
+          <Text color={brand.text}>TTL in days (Enter to skip):</Text>
+          <Box>
+            <Text color={brand.violet}>{"❯ "}</Text>
+            <TextInput
+              placeholder="30"
+              onSubmit={(v) => {
+                if (v.trim()) setStorageTtl(v.trim());
                 setStep("confirm");
               }}
             />
@@ -392,6 +482,34 @@ export function CreateChipScreen({
               <Text>
                 <Text color={brand.muted}>Col Replace </Text>
                 <Text color={brand.text}>None</Text>
+              </Text>
+            )}
+            {(storageBucket || storagePrefix || storageTtl) ? (
+              <>
+                <Text color={brand.cyan} bold>{"\n"}S3 Storage</Text>
+                {storageBucket && (
+                  <Text>
+                    <Text color={brand.muted}>Bucket      </Text>
+                    <Text color={brand.text}>{storageBucket}</Text>
+                  </Text>
+                )}
+                {storagePrefix && (
+                  <Text>
+                    <Text color={brand.muted}>Key Prefix  </Text>
+                    <Text color={brand.text}>{storagePrefix}</Text>
+                  </Text>
+                )}
+                {storageTtl && (
+                  <Text>
+                    <Text color={brand.muted}>TTL (days)  </Text>
+                    <Text color={brand.text}>{storageTtl}</Text>
+                  </Text>
+                )}
+              </>
+            ) : (
+              <Text>
+                <Text color={brand.muted}>S3 Storage  </Text>
+                <Text color={brand.text}>Default</Text>
               </Text>
             )}
           </Box>

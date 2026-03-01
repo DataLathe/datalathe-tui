@@ -34,6 +34,7 @@ export function App({ url }: AppProps) {
   const [connectedUrl, setConnectedUrl] = useState<string | null>(null);
   const [inputActive, setInputActive] = useState(false);
   const [checkedChipIds, setCheckedChipIds] = useState<string[]>([]);
+  const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0);
   const { current, navigate, goBack, goHome } = useNavigation("connect");
   const { columns, rows } = useTerminalSize();
 
@@ -83,6 +84,13 @@ export function App({ url }: AppProps) {
     [navigate, focusPanel],
   );
 
+  const handleChipDeleted = useCallback(() => {
+    const deletedId = current.params.chipId as string;
+    setCheckedChipIds((prev) => prev.filter((id) => id !== deletedId));
+    setSidebarRefreshKey((k) => k + 1);
+    goBack();
+  }, [current.params.chipId, goBack]);
+
   const mainFocused = activePanel === "main";
 
   function renderScreen() {
@@ -117,6 +125,7 @@ export function App({ url }: AppProps) {
             checkedChipIds={checkedChipIds}
             onQuery={(chipIds) => navigate("query", { queryChipIds: chipIds })}
             onBack={goBack}
+            onDeleted={handleChipDeleted}
             isFocused={mainFocused}
           />
         );
@@ -201,6 +210,7 @@ export function App({ url }: AppProps) {
             onCheckedChipIdsChange={setCheckedChipIds}
             onSelectTable={handleSelectTable}
             onSelectChip={handleSelectChip}
+            refreshKey={sidebarRefreshKey}
           />
         </Box>
 
