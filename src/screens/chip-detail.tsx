@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
 import { Spinner } from "@inkjs/ui";
 import type { Chip } from "@datalathe/client";
@@ -7,11 +7,18 @@ import { useAsync } from "../hooks/use-async.js";
 import { ErrorDisplay } from "../components/error-display.js";
 import { brand } from "../theme.js";
 
+type DeleteState =
+  | { phase: "idle" }
+  | { phase: "confirming" }
+  | { phase: "deleting" }
+  | { phase: "error"; message: string };
+
 interface ChipDetailScreenProps {
   chipId: string;
   checkedChipIds: string[];
   onQuery: (chipIds: string[]) => void;
   onBack: () => void;
+  onDeleted: () => void;
   isFocused: boolean;
 }
 
@@ -20,6 +27,7 @@ export function ChipDetailScreen({
   checkedChipIds,
   onQuery,
   onBack,
+  onDeleted,
   isFocused,
 }: ChipDetailScreenProps) {
   const client = useClient();
@@ -28,11 +36,33 @@ export function ChipDetailScreen({
     [chipId],
   );
 
-  useInput((input) => {
+  const [deleteState, setDeleteState] = useState<DeleteState>({ phase: "idle" });
+
+  useInput((input, key) => {
+    if (deleteState.phase === "deleting") return;
+
+    if (deleteState.phase === "confirming") {
+      if (input === "y") {
+        setDeleteState({ phase: "deleting" });
+        client.deleteChip(chipId).then(() => {
+          onDeleted();
+        }).catch((err: unknown) => {
+          setDeleteState({
+            phase: "error",
+            message: err instanceof Error ? err.message : String(err),
+          });
+        });
+      } else if (input === "n" || key.escape) {
+        setDeleteState({ phase: "idle" });
+      }
+      return;
+    }
+
     if (input === "s") {
-      // Query with this chip + any checked sidebar chips (deduplicated)
       const ids = [...new Set([chipId, ...checkedChipIds])];
       onQuery(ids);
+    } else if (input === "d") {
+      setDeleteState({ phase: "confirming" });
     }
   }, { isActive: isFocused });
 
@@ -118,8 +148,21 @@ export function ChipDetailScreen({
         </Box>
       )}
 
+      {deleteState.phase === "deleting" && <Spinner label="Deleting chip..." />}
+
+      {deleteState.phase === "error" && (
+        <Text color={brand.error}>Delete failed: {deleteState.message}</Text>
+      )}
+
+      {deleteState.phase === "confirming" && (
+        <Text color={brand.error} bold>
+          Delete this chip? y:confirm  n:cancel
+        </Text>
+      )}
+
       <Box gap={2}>
         <Text color={brand.muted}>s:query {otherChecked.length > 0 ? `(${1 + otherChecked.length} chips)` : "this chip"}</Text>
+        <Text color={brand.muted}>d:delete</Text>
         <Text color={brand.muted}>b:back</Text>
       </Box>
     </Box>
