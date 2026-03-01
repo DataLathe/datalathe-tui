@@ -6,7 +6,8 @@ export type Screen =
   | "database-tables"
   | "create-chip"
   | "chip-detail"
-  | "query";
+  | "query"
+  | "delete-chip";
 
 export interface NavigationState {
   screen: Screen;
