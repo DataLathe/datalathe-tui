@@ -18,6 +18,7 @@ interface ChipsListProps {
   onCheckedChange: (chipIds: string[]) => void;
   onSelectChip: (chipId: string) => void;
   height: number;
+  refreshKey?: number;
 }
 
 function formatDate(epoch: number): string {
@@ -35,6 +36,7 @@ export function ChipsList({
   onCheckedChange,
   onSelectChip,
   height,
+  refreshKey,
 }: ChipsListProps) {
   const [chips, setChips] = useState<ChipEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,7 +72,7 @@ export function ChipsList({
 
   useEffect(() => {
     loadChips();
-  }, [client]);
+  }, [client, refreshKey]);
 
   useInput((input, key) => {
     if (!isFocused || chips.length === 0) return;
