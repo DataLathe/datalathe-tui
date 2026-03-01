@@ -20,6 +20,11 @@ const menuItems = [
     value: "query" as Screen,
     description: "Run SQL queries against chips",
   },
+  {
+    label: "Delete Chip",
+    value: "delete-chip" as Screen,
+    description: "Remove a chip and its associated data",
+  },
 ];
 
 export function HomeScreen({ onNavigate, isFocused }: HomeScreenProps) {
