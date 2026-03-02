@@ -11,6 +11,7 @@ import { ConnectScreen } from "./screens/connect.js";
 import { HomeScreen } from "./screens/home.js";
 import { DatabaseTablesScreen } from "./screens/database-tables.js";
 import { CreateChipScreen } from "./screens/create-chip.js";
+import { CreateChipFromChipScreen } from "./screens/create-chip-from-chip.js";
 import { ChipDetailScreen } from "./screens/chip-detail.js";
 import { QueryScreen } from "./screens/query.js";
 import { DeleteChipScreen } from "./screens/delete-chip.js";
@@ -21,6 +22,7 @@ const SCREEN_TITLES: Record<string, string> = {
   home: "Home",
   "database-tables": "Database Schema",
   "create-chip": "Create Chip",
+  "create-chip-from-chip": "Create Chip from Chip",
   "chip-detail": "Chip Detail",
   query: "Query Chips",
   "delete-chip": "Delete Chip",
@@ -120,12 +122,26 @@ export function App({ url }: AppProps) {
             onInputActive={setInputActive}
           />
         );
+      case "create-chip-from-chip":
+        return (
+          <CreateChipFromChipScreen
+            defaultChipIds={current.params.sourceChipIds as string[] | undefined}
+            onDone={(chipId) => {
+              setSidebarRefreshKey((k) => k + 1);
+              navigate("chip-detail", { chipId });
+            }}
+            onBack={goBack}
+            onInputActive={setInputActive}
+            isFocused={mainFocused}
+          />
+        );
       case "chip-detail":
         return (
           <ChipDetailScreen
             chipId={current.params.chipId as string}
             checkedChipIds={checkedChipIds}
             onQuery={(chipIds) => navigate("query", { queryChipIds: chipIds })}
+            onCreateFromChip={(chipIds) => navigate("create-chip-from-chip", { sourceChipIds: chipIds })}
             onBack={goBack}
             onDeleted={handleChipDeleted}
             isFocused={mainFocused}
