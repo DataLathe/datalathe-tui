@@ -3,12 +3,14 @@ import { Box, Text, useInput } from "ink";
 import { Spinner } from "@inkjs/ui";
 import type { DatalatheClient, ChipMetadata, Chip } from "@datalathe/client";
 import { brand } from "../theme.js";
+import { formatDate, subChipCount } from "../utils/chip-options.js";
 
 interface ChipEntry {
   chipId: string;
   name: string;
   table: string;
   created: string;
+  subChipCount: number;
 }
 
 interface ChipsListProps {
@@ -19,14 +21,6 @@ interface ChipsListProps {
   onSelectChip: (chipId: string) => void;
   height: number;
   refreshKey?: number;
-}
-
-function formatDate(epoch: number): string {
-  return new Date(epoch * 1000).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 }
 
 export function ChipsList({
@@ -41,6 +35,7 @@ export function ChipsList({
   const [chips, setChips] = useState<ChipEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [cursor, setCursor] = useState(0);
+  const [scrollOffset, setScrollOffset] = useState(0);
 
   const loadChips = () => {
     setLoading(true);
@@ -62,8 +57,9 @@ export function ChipsList({
         return {
           chipId: id,
           name: meta?.name ?? id.slice(0, 12),
-          table: tables.join(", ") || "—",
-          created: meta ? formatDate(meta.created_at) : "—",
+          table: tables.join(", ") || "\u2014",
+          created: meta ? formatDate(meta.created_at) : "\u2014",
+          subChipCount: subChipCount(id, data.chips),
         };
       }));
       setLoading(false);
@@ -103,6 +99,18 @@ export function ChipsList({
     }
   }, [cursor, chips.length]);
 
+  // Keep scroll offset in sync with cursor
+  // Each chip takes 2 rows (name + details)
+  const maxVisible = Math.max(1, Math.floor(height / 2));
+
+  useEffect(() => {
+    setScrollOffset((prev) => {
+      if (cursor >= prev + maxVisible) return cursor - maxVisible + 1;
+      if (cursor < prev) return cursor;
+      return prev;
+    });
+  }, [cursor, maxVisible]);
+
   if (loading) {
     return <Spinner label="Loading..." />;
   }
@@ -111,16 +119,10 @@ export function ChipsList({
     return <Text color={brand.muted}>No chips</Text>;
   }
 
-  // Each chip takes 2 rows (name + details), so halve visible count
-  const maxVisible = Math.max(1, Math.floor((height - 1) / 2));
-  let scrollOffset = 0;
-  if (cursor >= scrollOffset + maxVisible) {
-    scrollOffset = cursor - maxVisible + 1;
-  }
-  if (cursor < scrollOffset) {
-    scrollOffset = cursor;
-  }
   const visible = chips.slice(scrollOffset, scrollOffset + maxVisible);
+  const canScrollUp = scrollOffset > 0;
+  const canScrollDown = scrollOffset + maxVisible < chips.length;
+  const hasAnySubs = chips.some((c) => c.subChipCount > 0);
 
   return (
     <Box flexDirection="column">
@@ -128,7 +130,7 @@ export function ChipsList({
         const globalIdx = scrollOffset + i;
         const isCursor = isFocused && globalIdx === cursor;
         const isChecked = checkedChipIds.includes(chip.chipId);
-        const checkbox = isChecked ? "☑" : "☐";
+        const checkbox = isChecked ? "\u2611" : "\u2610";
 
         return (
           <Box key={chip.chipId} flexDirection="column">
@@ -142,14 +144,17 @@ export function ChipsList({
             <Text>
               <Text color={brand.muted}>{"     "}</Text>
               <Text color={brand.violet}>{chip.table}</Text>
-              <Text color={brand.muted}>{" · "}{chip.created}</Text>
+              <Text color={brand.muted}>{" \u00b7 "}{chip.created}</Text>
+              {hasAnySubs && (
+                <Text color={brand.muted}>{" \u00b7 "}{chip.subChipCount} sub{chip.subChipCount !== 1 ? "s" : ""}</Text>
+              )}
             </Text>
           </Box>
         );
       })}
-      {chips.length > maxVisible && (
-        <Text color={brand.muted} dimColor>
-          {" "} {scrollOffset > 0 ? "↑" : " "} {scrollOffset + maxVisible < chips.length ? "↓" : " "}
+      {(canScrollUp || canScrollDown) && (
+        <Text color={brand.muted}>
+          {" "}{canScrollUp ? "\u2191" : " "} {scrollOffset + 1}\u2013{Math.min(scrollOffset + maxVisible, chips.length)}/{chips.length} {canScrollDown ? "\u2193" : " "}
         </Text>
       )}
     </Box>

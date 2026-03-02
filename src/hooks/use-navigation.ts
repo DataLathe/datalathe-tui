@@ -5,6 +5,7 @@ export type Screen =
   | "home"
   | "database-tables"
   | "create-chip"
+  | "create-chip-from-chip"
   | "chip-detail"
   | "query"
   | "delete-chip";
