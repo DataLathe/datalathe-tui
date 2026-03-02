@@ -10,6 +10,7 @@ import { useTerminalSize } from "../hooks/use-terminal-size.js";
 import { TableView } from "../components/table-view.js";
 import { ErrorDisplay } from "../components/error-display.js";
 import { brand } from "../theme.js";
+import { formatDate, chipColumns, chipLabel, chipHeader, hasAnySubChips } from "../utils/chip-options.js";
 
 type Step = "select-chips" | "transform-option" | "sql" | "executing" | "results";
 
@@ -18,51 +19,6 @@ interface QueryScreenProps {
   onBack: () => void;
   onInputActive?: (active: boolean) => void;
   isFocused: boolean;
-}
-
-function formatDate(epoch: number): string {
-  return new Date(epoch * 1000).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-/** Pad or truncate a string to a fixed width. */
-function fit(str: string, width: number): string {
-  if (str.length > width) return str.slice(0, width - 1) + "…";
-  return str.padEnd(width);
-}
-
-/** Compute column widths for chip table based on available width. */
-function chipColumns(availableWidth: number) {
-  // Reserve space for MultiSelect indicator (4 chars: "› ☑ ")
-  const usable = availableWidth - 4;
-  // Fixed columns: date(12) + 3 gaps(6)
-  const fixed = 18;
-  const flex = Math.max(30, usable - fixed);
-  const nameW = Math.max(10, Math.floor(flex * 0.3));
-  const tableW = Math.max(10, Math.floor(flex * 0.35));
-  const dateW = 12;
-  const descW = Math.max(0, usable - nameW - tableW - dateW - 6);
-  return { nameW, tableW, dateW, descW };
-}
-
-/** Build a fixed-width label for the MultiSelect option. */
-function chipLabel(
-  id: string,
-  meta: ChipMetadata | undefined,
-  chips: Chip[],
-  cols: ReturnType<typeof chipColumns>,
-): string {
-  const name = meta?.name ?? id.slice(0, 12);
-  const tables = [...new Set(chips.filter((c) => c.chip_id === id).map((c) => c.table_name))];
-  const table = tables.length > 0 ? tables.join(", ") : "—";
-  const created = meta ? formatDate(meta.created_at) : "—";
-  const desc = meta?.description ?? "";
-  const parts = [fit(name, cols.nameW), fit(table, cols.tableW), fit(created, cols.dateW)];
-  if (cols.descW > 5) parts.push(fit(desc, cols.descW));
-  return parts.join("  ");
 }
 
 export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }: QueryScreenProps) {
@@ -204,7 +160,8 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
     // Compute column layout based on available panel width
     const sidebarWidth = Math.min(50, Math.floor(termCols * 0.38));
     const panelWidth = termCols - sidebarWidth - 4;
-    const cols = chipColumns(panelWidth);
+    const showSubs = hasAnySubChips(allChips);
+    const cols = chipColumns(panelWidth, 4, showSubs);
 
     const options = uniqueIds.map((id) => ({
       label: chipLabel(id, metadataMap.get(id), allChips, cols),
@@ -217,9 +174,7 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
     const hasMore = options.length > visibleCount;
 
     // Build header with same column widths
-    const headerParts = [fit("Name", cols.nameW), fit("Tables", cols.tableW), fit("Created", cols.dateW)];
-    if (cols.descW > 5) headerParts.push(fit("Description", cols.descW));
-    const headerText = "    " + headerParts.join("  ");
+    const headerText = chipHeader(cols);
     const divider = "    " + "─".repeat(Math.min(panelWidth - 4, headerText.length));
 
     return (

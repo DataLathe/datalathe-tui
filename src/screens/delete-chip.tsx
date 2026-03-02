@@ -4,8 +4,10 @@ import { Select, Spinner } from "@inkjs/ui";
 import type { Chip, ChipMetadata } from "@datalathe/client";
 import { useClient } from "../hooks/use-client.js";
 import { useAsync } from "../hooks/use-async.js";
+import { useTerminalSize } from "../hooks/use-terminal-size.js";
 import { ErrorDisplay } from "../components/error-display.js";
 import { brand } from "../theme.js";
+import { chipColumns, chipLabel, chipHeader, hasAnySubChips } from "../utils/chip-options.js";
 
 type DeletePhase = "select" | "confirm" | "deleting" | "done" | "error";
 
@@ -52,6 +54,8 @@ export function DeleteChipScreen({
     }
   }, { isActive: isFocused && (phase === "confirm") });
 
+  const { columns: termCols } = useTerminalSize();
+
   if (loading) {
     return <Spinner label="Loading chips..." />;
   }
@@ -72,19 +76,16 @@ export function DeleteChipScreen({
   );
   const uniqueIds = [...new Set(mainChips.map((c: Chip) => c.chip_id))];
 
-  const options: ChipOption[] = uniqueIds.map((id) => {
-    const meta = metaMap.get(id);
-    const name = meta?.name ?? id.slice(0, 12);
-    const tables = [...new Set(
-      mainChips.filter((c: Chip) => c.chip_id === id).map((c: Chip) => c.table_name),
-    )];
-    const subChipCount = allChips.filter((c: Chip) => c.chip_id === id && c.chip_id !== c.sub_chip_id).length;
-    const subLabel = subChipCount > 0 ? ` · ${subChipCount} sub-chip${subChipCount > 1 ? "s" : ""}` : "";
-    return {
-      label: `${name} (${tables.join(", ") || "—"}${subLabel})`,
-      value: id,
-    };
-  });
+  const sidebarWidth = Math.min(50, Math.floor(termCols * 0.38));
+  const panelWidth = termCols - sidebarWidth - 4;
+  // Select uses 2-char indicator ("› ")
+  const showSubs = hasAnySubChips(allChips);
+  const cols = chipColumns(panelWidth, 2, showSubs);
+
+  const options: ChipOption[] = uniqueIds.map((id) => ({
+    label: chipLabel(id, metaMap.get(id), allChips, cols),
+    value: id,
+  }));
 
   if (options.length === 0) {
     return (
@@ -106,8 +107,10 @@ export function DeleteChipScreen({
       <Text color={brand.cyan} bold>Delete Chip</Text>
 
       {phase === "select" && (
-        <>
+        <Box flexDirection="column">
           <Text color={brand.muted}>Select a chip to delete:</Text>
+          <Text color={brand.violet} bold>{chipHeader(cols, 2)}</Text>
+          <Text color={brand.border}>{"  " + "─".repeat(Math.min(panelWidth - 4, panelWidth))}</Text>
           {isFocused ? (
             <Select
               options={options}
@@ -123,7 +126,7 @@ export function DeleteChipScreen({
               ))}
             </Box>
           )}
-        </>
+        </Box>
       )}
 
       {phase === "confirm" && selectedMeta && (

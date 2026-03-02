@@ -16,6 +16,11 @@ const menuItems = [
     description: "Stage data from a source into a new chip",
   },
   {
+    label: "Create Chip from Chip",
+    value: "create-chip-from-chip" as Screen,
+    description: "Create a new chip from existing chip(s)",
+  },
+  {
     label: "Query Chips",
     value: "query" as Screen,
     description: "Run SQL queries against chips",

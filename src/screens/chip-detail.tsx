@@ -17,6 +17,7 @@ interface ChipDetailScreenProps {
   chipId: string;
   checkedChipIds: string[];
   onQuery: (chipIds: string[]) => void;
+  onCreateFromChip: (chipIds: string[]) => void;
   onBack: () => void;
   onDeleted: () => void;
   isFocused: boolean;
@@ -26,6 +27,7 @@ export function ChipDetailScreen({
   chipId,
   checkedChipIds,
   onQuery,
+  onCreateFromChip,
   onBack,
   onDeleted,
   isFocused,
@@ -61,6 +63,9 @@ export function ChipDetailScreen({
     if (input === "s") {
       const ids = [...new Set([chipId, ...checkedChipIds])];
       onQuery(ids);
+    } else if (input === "c") {
+      const ids = [...new Set([chipId, ...checkedChipIds])];
+      onCreateFromChip(ids);
     } else if (input === "d") {
       setDeleteState({ phase: "confirming" });
     }
@@ -162,6 +167,7 @@ export function ChipDetailScreen({
 
       <Box gap={2}>
         <Text color={brand.muted}>s:query {otherChecked.length > 0 ? `(${1 + otherChecked.length} chips)` : "this chip"}</Text>
+        <Text color={brand.muted}>c:create from chip</Text>
         <Text color={brand.muted}>d:delete</Text>
         <Text color={brand.muted}>b:back</Text>
       </Box>
