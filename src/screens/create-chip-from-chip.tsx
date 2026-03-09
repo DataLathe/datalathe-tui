@@ -13,11 +13,12 @@ type Step =
   | "query"
   | "table-name"
   | "chip-name"
+  | "tags"
   | "confirm"
   | "creating"
   | "done";
 
-const INPUT_ACTIVE_STEPS: Step[] = ["query", "table-name", "chip-name"];
+const INPUT_ACTIVE_STEPS: Step[] = ["query", "table-name", "chip-name", "tags"];
 
 interface CreateChipFromChipScreenProps {
   defaultChipIds?: string[];
@@ -45,6 +46,7 @@ export function CreateChipFromChipScreen({
   const [query, setQuery] = useState("");
   const [tableName, setTableName] = useState("");
   const [chipName, setChipName] = useState("");
+  const [tagsInput, setTagsInput] = useState("");
   const [chipId, setChipId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,17 +59,32 @@ export function CreateChipFromChipScreen({
     return tableName || "chip_from_cache";
   };
 
+  const buildTags = (): Record<string, string> | undefined => {
+    if (!tagsInput.trim()) return undefined;
+    const map: Record<string, string> = {};
+    for (const pair of tagsInput.split(",")) {
+      const [key, value] = pair.split("=").map((s) => s.trim());
+      if (key && value) map[key] = value;
+    }
+    return Object.keys(map).length > 0 ? map : undefined;
+  };
+
   const handleCreate = async () => {
     setStep("creating");
     setError(null);
     try {
       const name = chipName || getDefaultChipName();
+      const tags = buildTags();
       const id = await client.createChipFromChip(
         selectedChipIds,
         query || undefined,
         tableName || undefined,
         name,
       );
+      // Apply tags after chip creation
+      if (tags && id) {
+        await client.addChipTags(id, tags);
+      }
       setChipId(id);
       setStep("done");
     } catch (err) {
@@ -179,6 +196,23 @@ export function CreateChipFromChipScreen({
                 } else {
                   setChipName(getDefaultChipName());
                 }
+                setStep("tags");
+              }}
+            />
+          </Box>
+        </Box>
+      )}
+
+      {step === "tags" && (
+        <Box flexDirection="column" gap={1}>
+          <Text color={brand.text}>Tags (Enter to skip):</Text>
+          <Text color={brand.muted}>Format: key1=value1, key2=value2</Text>
+          <Box>
+            <Text color={brand.violet}>{"❯ "}</Text>
+            <TextInput
+              placeholder="env=prod, tenant_id=acme"
+              onSubmit={(v) => {
+                if (v.trim()) setTagsInput(v.trim());
                 setStep("confirm");
               }}
             />
@@ -219,6 +253,10 @@ export function CreateChipFromChipScreen({
             <Text>
               <Text color={brand.muted}>Table Name    </Text>
               <Text color={brand.text}>{tableName || "data"}</Text>
+            </Text>
+            <Text>
+              <Text color={brand.muted}>Tags          </Text>
+              <Text color={brand.text}>{tagsInput || "None"}</Text>
             </Text>
           </Box>
           <Box marginTop={1}>
