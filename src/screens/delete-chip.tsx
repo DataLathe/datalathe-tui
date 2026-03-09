@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
 import { Select, Spinner } from "@inkjs/ui";
-import type { Chip, ChipMetadata } from "@datalathe/client";
+import type { Chip } from "@datalathe/client";
 import { useClient } from "../hooks/use-client.js";
 import { useAsync } from "../hooks/use-async.js";
 import { useTerminalSize } from "../hooks/use-terminal-size.js";
 import { ErrorDisplay } from "../components/error-display.js";
 import { brand } from "../theme.js";
-import { chipColumns, chipLabel, chipHeader, hasAnySubChips } from "../utils/chip-options.js";
+import { chipLabel, chipHeader, chipDisplayConfig } from "../utils/chip-options.js";
 
 type DeletePhase = "select" | "confirm" | "deleting" | "done" | "error";
 
@@ -64,26 +64,13 @@ export function DeleteChipScreen({
     return <ErrorDisplay message={error} onRetry={refetch} onBack={onBack} />;
   }
 
-  const allChips = data?.chips ?? [];
-  const metadata = data?.metadata ?? [];
-  const metaMap = new Map<string, ChipMetadata>();
-  for (const m of metadata) {
-    metaMap.set(m.chip_id, m);
-  }
-
-  const mainChips = allChips.filter(
-    (c: Chip) => c.chip_id === c.sub_chip_id,
-  );
-  const uniqueIds = [...new Set(mainChips.map((c: Chip) => c.chip_id))];
-
   const sidebarWidth = Math.min(50, Math.floor(termCols * 0.38));
   const panelWidth = termCols - sidebarWidth - 4;
   // Select uses 2-char indicator ("› ")
-  const showSubs = hasAnySubChips(allChips);
-  const cols = chipColumns(panelWidth, 2, showSubs);
+  const { allChips, metaMap, index, mainChipIds, cols } = chipDisplayConfig(data, panelWidth, 2);
 
-  const options: ChipOption[] = uniqueIds.map((id) => ({
-    label: chipLabel(id, metaMap.get(id), allChips, cols),
+  const options: ChipOption[] = mainChipIds.map((id) => ({
+    label: chipLabel(id, metaMap.get(id), index, cols),
     value: id,
   }));
 

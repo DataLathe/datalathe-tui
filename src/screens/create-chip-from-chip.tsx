@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text } from "ink";
 import { TextInput, Spinner, Select, MultiSelect } from "@inkjs/ui";
-import type { Chip, ChipMetadata } from "@datalathe/client";
 import { useClient } from "../hooks/use-client.js";
 import { useAsync } from "../hooks/use-async.js";
 import { useTerminalSize } from "../hooks/use-terminal-size.js";
 import { brand } from "../theme.js";
-import { chipColumns, chipLabel, chipHeader, hasAnySubChips } from "../utils/chip-options.js";
+import { chipLabel, chipHeader, chipDisplayConfig } from "../utils/chip-options.js";
 
 type Step =
   | "select-chips"
@@ -93,16 +92,7 @@ export function CreateChipFromChipScreen({
     }
   };
 
-  const allChips = chipsData?.chips ?? [];
-  const metadata = chipsData?.metadata ?? [];
-  const showSubChips = hasAnySubChips(allChips);
-
-  // Unique main chip IDs (chip_id === sub_chip_id)
-  const mainChipIds = [...new Set(
-    allChips.filter((c: Chip) => c.chip_id === c.sub_chip_id).map((c: Chip) => c.chip_id),
-  )];
-
-  const cols = chipColumns(termCols, 4, showSubChips);
+  const { metaMap, index, mainChipIds, cols } = chipDisplayConfig(chipsData, termCols, 4);
 
   return (
     <Box flexDirection="column" gap={1} paddingY={1}>
@@ -124,13 +114,10 @@ export function CreateChipFromChipScreen({
                 {chipHeader(cols)}
               </Text>
               <MultiSelect
-                options={mainChipIds.map((id) => {
-                  const meta = metadata.find((m: ChipMetadata) => m.chip_id === id);
-                  return {
-                    label: chipLabel(id, meta, allChips, cols),
-                    value: id,
-                  };
-                })}
+                options={mainChipIds.map((id) => ({
+                  label: chipLabel(id, metaMap.get(id), index, cols),
+                  value: id,
+                }))}
                 onSubmit={(values) => {
                   if (values.length > 0) {
                     setSelectedChipIds(values);
@@ -237,7 +224,7 @@ export function CreateChipFromChipScreen({
               <Text color={brand.text}>{selectedChipIds.length} chip{selectedChipIds.length !== 1 ? "s" : ""}</Text>
             </Text>
             {selectedChipIds.map((id) => {
-              const meta = metadata.find((m: ChipMetadata) => m.chip_id === id);
+              const meta = metaMap.get(id);
               return (
                 <Text key={id}>
                   <Text color={brand.muted}>              </Text>
