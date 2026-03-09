@@ -3,14 +3,14 @@ import { execSync } from "child_process";
 import { Box, Text, useInput } from "ink";
 import { TextInput, Spinner, MultiSelect, Select } from "@inkjs/ui";
 import { DatalatheResultSet } from "@datalathe/client";
-import type { ChipMetadata, Chip, SchemaField, ReportTiming } from "@datalathe/client";
+import type { SchemaField, ReportTiming } from "@datalathe/client";
 import { useClient } from "../hooks/use-client.js";
 import { useAsync } from "../hooks/use-async.js";
 import { useTerminalSize } from "../hooks/use-terminal-size.js";
 import { TableView } from "../components/table-view.js";
 import { ErrorDisplay } from "../components/error-display.js";
 import { brand } from "../theme.js";
-import { formatDate, chipColumns, chipLabel, chipHeader, hasAnySubChips } from "../utils/chip-options.js";
+import { formatDate, chipLabel, chipHeader, chipDisplayConfig } from "../utils/chip-options.js";
 
 type Step = "select-chips" | "transform-option" | "sql" | "executing" | "results";
 
@@ -140,16 +140,11 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
     if (chipsLoading) return <Spinner label="Loading chips..." />;
     if (chipsError) return <ErrorDisplay message={chipsError} onRetry={refetch} onBack={onBack} />;
 
-    const metadataMap = new Map<string, ChipMetadata>();
-    for (const m of chipsData?.metadata ?? []) {
-      metadataMap.set(m.chip_id, m);
-    }
-    const allChips = chipsData?.chips ?? [];
-    // Only show main chips (chip_id === sub_chip_id)
-    const mainChips = allChips.filter((c) => c.chip_id === c.sub_chip_id);
-    const uniqueIds = [...new Set(mainChips.map((c) => c.chip_id))];
+    const sidebarWidth = Math.min(50, Math.floor(termCols * 0.38));
+    const panelWidth = termCols - sidebarWidth - 4;
+    const { metaMap, index, mainChipIds, cols } = chipDisplayConfig(chipsData, panelWidth, 4);
 
-    if (uniqueIds.length === 0) {
+    if (mainChipIds.length === 0) {
       return (
         <Box paddingY={1}>
           <Text color={brand.muted}>No chips available. Create one first!</Text>
@@ -157,14 +152,8 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
       );
     }
 
-    // Compute column layout based on available panel width
-    const sidebarWidth = Math.min(50, Math.floor(termCols * 0.38));
-    const panelWidth = termCols - sidebarWidth - 4;
-    const showSubs = hasAnySubChips(allChips);
-    const cols = chipColumns(panelWidth, 4, showSubs);
-
-    const options = uniqueIds.map((id) => ({
-      label: chipLabel(id, metadataMap.get(id), allChips, cols),
+    const options = mainChipIds.map((id) => ({
+      label: chipLabel(id, metaMap.get(id), index, cols),
       value: id,
     }));
 
@@ -233,11 +222,7 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
 
   if (step === "sql") {
     // Build chip summary for display
-    const metadataMap = new Map<string, ChipMetadata>();
-    for (const m of chipsData?.metadata ?? []) {
-      metadataMap.set(m.chip_id, m);
-    }
-    const allChips = chipsData?.chips ?? [];
+    const { metaMap: sqlMetaMap, index: sqlIndex } = chipDisplayConfig(chipsData, 0);
 
     return (
       <Box flexDirection="column" gap={1} paddingY={1}>
@@ -246,8 +231,9 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
         </Text>
         <Box flexDirection="column">
           {selectedChipIds.map((id) => {
-            const meta = metadataMap.get(id);
-            const tables = [...new Set(allChips.filter((c) => c.chip_id === id).map((c) => c.table_name))];
+            const meta = sqlMetaMap.get(id);
+            const chips = sqlIndex.chipsByChipId.get(id) ?? [];
+            const tables = [...new Set(chips.map((c) => c.table_name))];
             const name = meta?.name ?? id.slice(0, 12);
             return (
               <Text key={id} color={brand.muted}>

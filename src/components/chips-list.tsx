@@ -3,7 +3,7 @@ import { Box, Text, useInput } from "ink";
 import { Spinner } from "@inkjs/ui";
 import type { DatalatheClient, ChipMetadata, Chip } from "@datalathe/client";
 import { brand } from "../theme.js";
-import { formatDate, subChipCount } from "../utils/chip-options.js";
+import { formatDate, buildChipIndex, subChipCount, partitionSummary, tagSummary } from "../utils/chip-options.js";
 
 interface ChipEntry {
   chipId: string;
@@ -11,6 +11,8 @@ interface ChipEntry {
   table: string;
   created: string;
   subChipCount: number;
+  partitionLabel: string | null;
+  tagLabel: string | null;
 }
 
 interface ChipsListProps {
@@ -44,6 +46,10 @@ export function ChipsList({
       for (const m of data.metadata) {
         metaMap.set(m.chip_id, m);
       }
+
+      const allTags = data.tags ?? [];
+      const index = buildChipIndex(data.chips, allTags);
+
       // Only show main chips (chip_id === sub_chip_id)
       const mainChips = data.chips.filter(
         (c: Chip) => c.chip_id === c.sub_chip_id,
@@ -51,15 +57,18 @@ export function ChipsList({
       const uniqueIds = [...new Set(mainChips.map((c: Chip) => c.chip_id))];
       setChips(uniqueIds.map((id) => {
         const meta = metaMap.get(id);
-        const tables = [...new Set(
-          mainChips.filter((c: Chip) => c.chip_id === id).map((c: Chip) => c.table_name),
-        )];
+        const chips = index.chipsByChipId.get(id) ?? [];
+        const tables = [...new Set(chips.map((c: Chip) => c.table_name))];
+        const ps = partitionSummary(id, index);
+        const ts = tagSummary(id, index);
         return {
           chipId: id,
           name: meta?.name ?? id.slice(0, 12),
           table: tables.join(", ") || "\u2014",
           created: meta ? formatDate(meta.created_at) : "\u2014",
-          subChipCount: subChipCount(id, data.chips),
+          subChipCount: subChipCount(id, index),
+          partitionLabel: ps !== "\u2014" ? ps : null,
+          tagLabel: ts !== "\u2014" ? ts : null,
         };
       }));
       setLoading(false);
@@ -100,8 +109,10 @@ export function ChipsList({
   }, [cursor, chips.length]);
 
   // Keep scroll offset in sync with cursor
-  // Each chip takes 2 rows (name + details)
-  const maxVisible = Math.max(1, Math.floor(height / 2));
+  // Each chip takes 3 rows (name + details + tags/partitions) or 2 if no tags/partitions
+  const hasAnyExtra = chips.some((c) => c.partitionLabel || c.tagLabel);
+  const rowsPerChip = hasAnyExtra ? 3 : 2;
+  const maxVisible = Math.max(1, Math.floor(height / rowsPerChip));
 
   useEffect(() => {
     setScrollOffset((prev) => {
@@ -149,6 +160,20 @@ export function ChipsList({
                 <Text color={brand.muted}>{" \u00b7 "}{chip.subChipCount} sub{chip.subChipCount !== 1 ? "s" : ""}</Text>
               )}
             </Text>
+            {(chip.partitionLabel || chip.tagLabel) && (
+              <Text>
+                <Text color={brand.muted}>{"     "}</Text>
+                {chip.partitionLabel && (
+                  <Text color={brand.indigo}>{chip.partitionLabel}</Text>
+                )}
+                {chip.partitionLabel && chip.tagLabel && (
+                  <Text color={brand.muted}>{" \u00b7 "}</Text>
+                )}
+                {chip.tagLabel && (
+                  <Text color={brand.muted}>{chip.tagLabel}</Text>
+                )}
+              </Text>
+            )}
           </Box>
         );
       })}
