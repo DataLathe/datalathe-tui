@@ -14,6 +14,7 @@ type Step =
   | "query"
   | "file-path"
   | "chip-name"
+  | "tags"
   | "partition"
   | "partition-mode"
   | "partition-query"
@@ -33,6 +34,7 @@ const INPUT_ACTIVE_STEPS: Step[] = [
   "query",
   "file-path",
   "chip-name",
+  "tags",
   "partition",
   "partition-query",
   "partition-values",
@@ -72,6 +74,7 @@ export function CreateChipScreen({
   const [partitionQuery, setPartitionQuery] = useState("");
   const [partitionValues, setPartitionValues] = useState("");
   const [chipName, setChipName] = useState("");
+  const [tagsInput, setTagsInput] = useState("");
   const [columnReplaceInput, setColumnReplaceInput] = useState("");
   const [storageBucket, setStorageBucket] = useState("");
   const [storagePrefix, setStoragePrefix] = useState("");
@@ -109,6 +112,16 @@ export function CreateChipScreen({
     return Object.keys(config).length > 0 ? config : undefined;
   };
 
+  const buildTags = (): Record<string, string> | undefined => {
+    if (!tagsInput.trim()) return undefined;
+    const map: Record<string, string> = {};
+    for (const pair of tagsInput.split(",")) {
+      const [key, value] = pair.split("=").map((s) => s.trim());
+      if (key && value) map[key] = value;
+    }
+    return Object.keys(map).length > 0 ? map : undefined;
+  };
+
   const buildColumnReplace = (): Record<string, string> | undefined => {
     if (!columnReplaceInput.trim()) return undefined;
     const map: Record<string, string> = {};
@@ -132,6 +145,7 @@ export function CreateChipScreen({
     const partition = buildPartition();
     const columnReplace = buildColumnReplace();
     const storageConfig = buildStorageConfig();
+    const tags = buildTags();
     try {
       let id: string;
       const name = chipName || getDefaultChipName();
@@ -139,6 +153,10 @@ export function CreateChipScreen({
         id = await client.createChipFromFile(filePath, undefined, partition, name, columnReplace, storageConfig);
       } else {
         id = await client.createChip(source, query, tableName, partition, name, columnReplace, storageConfig);
+      }
+      // Apply tags after chip creation
+      if (tags && id) {
+        await client.addChipTags(id, tags);
       }
       setChipId(id);
       setStep("done");
@@ -241,6 +259,23 @@ export function CreateChipScreen({
                 } else {
                   setChipName(getDefaultChipName());
                 }
+                setStep("tags");
+              }}
+            />
+          </Box>
+        </Box>
+      )}
+
+      {step === "tags" && (
+        <Box flexDirection="column" gap={1}>
+          <Text color={brand.text}>Tags (Enter to skip):</Text>
+          <Text color={brand.muted}>Format: key1=value1, key2=value2</Text>
+          <Box>
+            <Text color={brand.violet}>{"❯ "}</Text>
+            <TextInput
+              placeholder="env=prod, tenant_id=acme"
+              onSubmit={(v) => {
+                if (v.trim()) setTagsInput(v.trim());
                 setStep("partition");
               }}
             />
@@ -481,6 +516,17 @@ export function CreateChipScreen({
             ) : (
               <Text>
                 <Text color={brand.muted}>Col Replace </Text>
+                <Text color={brand.text}>None</Text>
+              </Text>
+            )}
+            {tagsInput ? (
+              <Text>
+                <Text color={brand.muted}>Tags        </Text>
+                <Text color={brand.text}>{tagsInput}</Text>
+              </Text>
+            ) : (
+              <Text>
+                <Text color={brand.muted}>Tags        </Text>
                 <Text color={brand.text}>None</Text>
               </Text>
             )}
