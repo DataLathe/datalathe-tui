@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
 import { Spinner } from "@inkjs/ui";
-import type { Chip } from "@datalathe/client";
+import type { Chip, ChipTag } from "@datalathe/client";
 import { useClient } from "../hooks/use-client.js";
 import { useAsync } from "../hooks/use-async.js";
 import { ErrorDisplay } from "../components/error-display.js";
@@ -81,6 +81,7 @@ export function ChipDetailScreen({
 
   const allChips = data?.chips ?? [];
   const meta = (data?.metadata ?? []).find((m) => m.chip_id === chipId);
+  const chipTags = (data?.tags ?? []).filter((t: ChipTag) => t.chip_id === chipId);
 
   // Main chip: where chip_id === sub_chip_id
   const mainChip = allChips.find(
@@ -142,6 +143,20 @@ export function ChipDetailScreen({
               </Text>
             </Text>
           )}
+        </Box>
+      )}
+
+      {chipTags.length > 0 && (
+        <Box flexDirection="column">
+          <Text color={brand.cyan} bold>
+            Tags
+          </Text>
+          {chipTags.map((t: ChipTag) => (
+            <Text key={t.key}>
+              <Text color={brand.muted}>{t.key}: </Text>
+              <Text color={brand.text}>{t.value}</Text>
+            </Text>
+          ))}
         </Box>
       )}
 
