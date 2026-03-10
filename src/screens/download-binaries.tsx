@@ -5,14 +5,14 @@ import { brand } from "../theme.js";
 import {
   fetchVersions,
   fetchDownloadUrls,
-  type VersionsResponse,
 } from "../utils/license-api.js";
 import {
   downloadBinary,
   formatBytes,
   type DownloadProgress,
 } from "../utils/download.js";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 
 type Step =
@@ -21,6 +21,8 @@ type Step =
   | "select-version"
   | "select-platform"
   | "select-directory"
+  | "create-license-file"
+  | "create-configs"
   | "confirm"
   | "downloading"
   | "done"
@@ -36,6 +38,26 @@ function detectPlatform(): string {
   if (process.platform === "linux" && process.arch === "x64")
     return "linux-x86_64";
   return `${process.platform}-${process.arch}`;
+}
+
+function defaultEngineConfig(baseDir: string, configDir: string): object {
+  return {
+    setup_config: {
+      data_path: join(baseDir, "data"),
+      connection_config_dir: join(configDir, "connections"),
+      persist_path: join(baseDir, "tmp", "datalathe"),
+      chip_dir: join(baseDir, "tmp", "chips"),
+      chip_manager_url: "http://localhost:5053/chip",
+      license_api_file: join(configDir, "license.json"),
+    },
+  };
+}
+
+function defaultChipConfig(baseDir: string): object {
+  return {
+    database_file_path: join(baseDir, "tmp", "chip_manager"),
+    port: 5053,
+  };
 }
 
 interface DownloadBinariesScreenProps {
@@ -54,6 +76,8 @@ export function DownloadBinariesScreen({
   const [selectedVersion, setSelectedVersion] = useState("");
   const [selectedPlatform, setSelectedPlatform] = useState("");
   const [directory, setDirectory] = useState(DEFAULT_DIR);
+  const [createLicenseFile, setCreateLicenseFile] = useState(false);
+  const [createConfigs, setCreateConfigs] = useState(false);
   const [progress, setProgress] = useState<DownloadProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [failedStep, setFailedStep] = useState<Step>("license-key");
@@ -71,7 +95,6 @@ export function DownloadBinariesScreen({
         setStep(failedStep);
       } else if (input === "b") {
         setError(null);
-        // Go back one step from where it failed
         if (failedStep === "loading-versions") setStep("license-key");
         else if (failedStep === "downloading") setStep("confirm");
         else setStep("license-key");
@@ -99,6 +122,8 @@ export function DownloadBinariesScreen({
     }
   };
 
+  const configDir = join(dirname(directory), "config");
+
   const handleConfirmDownload = async () => {
     setStep("downloading");
     setError(null);
@@ -122,6 +147,28 @@ export function DownloadBinariesScreen({
         "chip-manager",
         setProgress
       );
+
+      // Create config files if requested
+      if (createLicenseFile || createConfigs) {
+        await mkdir(configDir, { recursive: true });
+      }
+
+      if (createLicenseFile) {
+        const licenseData = JSON.stringify({ licenseKey }, null, 4);
+        await writeFile(join(configDir, "license.json"), licenseData + "\n");
+      }
+
+      if (createConfigs) {
+        const baseDir = dirname(directory);
+        const engineConf = JSON.stringify(defaultEngineConfig(baseDir, configDir), null, 4);
+        await writeFile(join(configDir, "engine.conf.json"), engineConf + "\n");
+
+        const chipConf = JSON.stringify(defaultChipConfig(baseDir), null, 4);
+        await writeFile(join(configDir, "chip.conf.json"), chipConf + "\n");
+
+        // Create connections directory referenced by engine config
+        await mkdir(join(configDir, "connections"), { recursive: true });
+      }
 
       setStep("done");
     } catch (err) {
@@ -174,16 +221,15 @@ export function DownloadBinariesScreen({
           <Text color={brand.muted}>Version: {selectedVersion}</Text>
           <Text color={brand.text}>Select platform:</Text>
           <Select
-            options={platforms.map((p) => ({
+            options={[
+              // Put detected platform first so it's focused by default
+              ...platforms.filter((p) => p === detectedPlatform),
+              ...platforms.filter((p) => p !== detectedPlatform),
+            ].map((p) => ({
               label:
                 p === detectedPlatform ? `${p} (detected)` : p,
               value: p,
             }))}
-            defaultValue={
-              platforms.includes(detectedPlatform)
-                ? detectedPlatform
-                : undefined
-            }
             onChange={(value) => {
               setSelectedPlatform(value);
               setStep("select-directory");
@@ -208,10 +254,48 @@ export function DownloadBinariesScreen({
               onSubmit={(v) => {
                 const dir = v.trim() || DEFAULT_DIR;
                 setDirectory(dir);
-                setStep("confirm");
+                setStep("create-license-file");
               }}
             />
           </Box>
+        </Box>
+      )}
+
+      {step === "create-license-file" && (
+        <Box flexDirection="column" gap={1}>
+          <Text color={brand.text}>Create license file?</Text>
+          <Text color={brand.muted}>
+            Saves license key to {join(dirname(directory), "config", "license.json")}
+          </Text>
+          <Select
+            options={[
+              { label: "Yes", value: "yes" },
+              { label: "No", value: "no" },
+            ]}
+            onChange={(value) => {
+              setCreateLicenseFile(value === "yes");
+              setStep("create-configs");
+            }}
+          />
+        </Box>
+      )}
+
+      {step === "create-configs" && (
+        <Box flexDirection="column" gap={1}>
+          <Text color={brand.text}>Create default config files?</Text>
+          <Text color={brand.muted}>
+            Saves engine.conf.json and chip.conf.json to {join(dirname(directory), "config")}/
+          </Text>
+          <Select
+            options={[
+              { label: "Yes", value: "yes" },
+              { label: "No", value: "no" },
+            ]}
+            onChange={(value) => {
+              setCreateConfigs(value === "yes");
+              setStep("confirm");
+            }}
+          />
         </Box>
       )}
 
@@ -222,20 +306,28 @@ export function DownloadBinariesScreen({
           </Text>
           <Box flexDirection="column" paddingLeft={1}>
             <Text>
-              <Text color={brand.muted}>Version    </Text>
+              <Text color={brand.muted}>Version       </Text>
               <Text color={brand.text}>{selectedVersion}</Text>
             </Text>
             <Text>
-              <Text color={brand.muted}>Platform   </Text>
+              <Text color={brand.muted}>Platform      </Text>
               <Text color={brand.text}>{selectedPlatform}</Text>
             </Text>
             <Text>
-              <Text color={brand.muted}>Directory  </Text>
+              <Text color={brand.muted}>Directory     </Text>
               <Text color={brand.text}>{directory}</Text>
             </Text>
             <Text>
-              <Text color={brand.muted}>Binaries   </Text>
+              <Text color={brand.muted}>Binaries      </Text>
               <Text color={brand.text}>engine, chip-manager</Text>
+            </Text>
+            <Text>
+              <Text color={brand.muted}>License file  </Text>
+              <Text color={brand.text}>{createLicenseFile ? "Yes" : "No"}</Text>
+            </Text>
+            <Text>
+              <Text color={brand.muted}>Config files  </Text>
+              <Text color={brand.text}>{createConfigs ? "Yes" : "No"}</Text>
             </Text>
           </Box>
           <Box marginTop={1}>
@@ -284,7 +376,46 @@ export function DownloadBinariesScreen({
                 {join(directory, "chip-manager")}
               </Text>
             </Text>
+            {createLicenseFile && (
+              <Text>
+                <Text color={brand.muted}>license       </Text>
+                <Text color={brand.text}>
+                  {join(configDir, "license.json")}
+                </Text>
+              </Text>
+            )}
+            {createConfigs && (
+              <>
+                <Text>
+                  <Text color={brand.muted}>engine config </Text>
+                  <Text color={brand.text}>
+                    {join(configDir, "engine.conf.json")}
+                  </Text>
+                </Text>
+                <Text>
+                  <Text color={brand.muted}>chip config   </Text>
+                  <Text color={brand.text}>
+                    {join(configDir, "chip.conf.json")}
+                  </Text>
+                </Text>
+              </>
+            )}
           </Box>
+          {createConfigs && (
+            <Box flexDirection="column" gap={1} paddingTop={1}>
+              <Text color={brand.cyan} bold>
+                Run these in two separate terminals:
+              </Text>
+              <Box flexDirection="column" paddingLeft={1}>
+                <Text color={brand.text}>
+                  CONFIG_PATH={join(configDir, "chip.conf.json")} {join(directory, "chip-manager")}
+                </Text>
+                <Text color={brand.text}>
+                  CONFIG_PATH={join(configDir, "engine.conf.json")} {join(directory, "engine")}
+                </Text>
+              </Box>
+            </Box>
+          )}
           <Text color={brand.muted} dimColor>
             Press b to go back
           </Text>
