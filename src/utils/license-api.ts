@@ -1,6 +1,7 @@
 import https from "node:https";
 
 const LICENSE_API_HOST = "license.datalathe.com";
+const agent = new https.Agent({ rejectUnauthorized: false });
 
 export interface VersionsResponse {
   versions: string[];
@@ -27,8 +28,8 @@ function httpsPost(path: string, body: Record<string, unknown>): Promise<{ statu
           "Content-Type": "application/json",
           "Content-Length": Buffer.byteLength(payload),
         },
-        rejectUnauthorized: false,
-      } as https.RequestOptions,
+        agent,
+      },
       (res) => {
         const chunks: Buffer[] = [];
         res.on("data", (chunk: Buffer) => chunks.push(chunk));
