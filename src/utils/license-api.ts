@@ -13,14 +13,30 @@ export interface DownloadUrlsResponse {
   expiresIn: number;
 }
 
+async function licenseFetch(
+  path: string,
+  body: Record<string, string>
+): Promise<Response> {
+  try {
+    return await fetch(`${LICENSE_API}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    const cause = err instanceof Error ? err.cause : undefined;
+    const detail =
+      cause instanceof Error ? cause.message : String(err);
+    throw new Error(
+      `Could not reach license server (${detail}). Check your network connection.`
+    );
+  }
+}
+
 export async function fetchVersions(
   licenseKey: string
 ): Promise<VersionsResponse> {
-  const res = await fetch(`${LICENSE_API}/downloads/versions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ licenseKey }),
-  });
+  const res = await licenseFetch("/downloads/versions", { licenseKey });
 
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as Record<string, string>;
@@ -37,10 +53,10 @@ export async function fetchDownloadUrls(
   version: string,
   platform: string
 ): Promise<DownloadUrlsResponse> {
-  const res = await fetch(`${LICENSE_API}/downloads/urls`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ licenseKey, version, platform }),
+  const res = await licenseFetch("/downloads/urls", {
+    licenseKey,
+    version,
+    platform,
   });
 
   if (!res.ok) {
