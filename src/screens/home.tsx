@@ -26,9 +26,19 @@ const menuItems = [
     description: "Run SQL queries against chips",
   },
   {
+    label: "Extract Tables",
+    value: "extract-tables" as Screen,
+    description: "Parse SQL to find referenced tables",
+  },
+  {
     label: "Delete Chip",
     value: "delete-chip" as Screen,
     description: "Remove a chip and its associated data",
+  },
+  {
+    label: "Download Binaries",
+    value: "download-binaries" as Screen,
+    description: "Download engine and chip-manager",
   },
 ];
 

@@ -8,7 +8,9 @@ export type Screen =
   | "create-chip-from-chip"
   | "chip-detail"
   | "query"
-  | "delete-chip";
+  | "delete-chip"
+  | "extract-tables"
+  | "download-binaries";
 
 export interface NavigationState {
   screen: Screen;
