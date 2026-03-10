@@ -15,6 +15,8 @@ import { CreateChipFromChipScreen } from "./screens/create-chip-from-chip.js";
 import { ChipDetailScreen } from "./screens/chip-detail.js";
 import { QueryScreen } from "./screens/query.js";
 import { DeleteChipScreen } from "./screens/delete-chip.js";
+import { ExtractTablesScreen } from "./screens/extract-tables.js";
+import { DownloadBinariesScreen } from "./screens/download-binaries.js";
 import { brand } from "./theme.js";
 
 const SCREEN_TITLES: Record<string, string> = {
@@ -26,6 +28,8 @@ const SCREEN_TITLES: Record<string, string> = {
   "chip-detail": "Chip Detail",
   query: "Query Chips",
   "delete-chip": "Delete Chip",
+  "extract-tables": "Extract Tables",
+  "download-binaries": "Download Binaries",
 };
 
 interface AppProps {
@@ -37,6 +41,7 @@ export function App({ url }: AppProps) {
   const [client, setClient] = useState<DatalatheClient | null>(null);
   const [connectedUrl, setConnectedUrl] = useState<string | null>(null);
   const [inputActive, setInputActive] = useState(false);
+  const [preConnectScreen, setPreConnectScreen] = useState<"connect" | "download">("connect");
   const [checkedChipIds, setCheckedChipIds] = useState<string[]>([]);
   const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0);
   const { current, navigate, goBack, goHome } = useNavigation("connect");
@@ -158,6 +163,14 @@ export function App({ url }: AppProps) {
             isFocused={mainFocused}
           />
         );
+      case "extract-tables":
+        return (
+          <ExtractTablesScreen
+            onBack={goBack}
+            onInputActive={setInputActive}
+            isFocused={mainFocused}
+          />
+        );
       case "query":
         return (
           <QueryScreen
@@ -170,13 +183,37 @@ export function App({ url }: AppProps) {
             isFocused={mainFocused}
           />
         );
+      case "download-binaries":
+        return (
+          <DownloadBinariesScreen
+            onBack={goBack}
+            onInputActive={setInputActive}
+          />
+        );
       default:
         return <HomeScreen onNavigate={(screen) => navigate(screen)} isFocused={mainFocused} />;
     }
   }
 
-  // Connect screen: fullscreen centered, no panels
+  // Pre-connection screens: fullscreen centered, no panels
   if (!isConnected) {
+    if (preConnectScreen === "download") {
+      return (
+        <Box
+          flexDirection="column"
+          width={columns}
+          height={rows}
+          alignItems="center"
+          justifyContent="center"
+        >
+          <DownloadBinariesScreen
+            onBack={() => setPreConnectScreen("connect")}
+            onInputActive={setInputActive}
+          />
+        </Box>
+      );
+    }
+
     return (
       <Box
         flexDirection="column"
@@ -185,7 +222,11 @@ export function App({ url }: AppProps) {
         alignItems="center"
         justifyContent="center"
       >
-        <ConnectScreen initialUrl={url} onConnect={handleConnect} />
+        <ConnectScreen
+          initialUrl={url}
+          onConnect={handleConnect}
+          onDownload={() => setPreConnectScreen("download")}
+        />
       </Box>
     );
   }

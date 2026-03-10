@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Box, Text } from "ink";
+import { Box, Text, useInput } from "ink";
 import { TextInput, Spinner } from "@inkjs/ui";
 import { DatalatheClient } from "@datalathe/client";
 import { AsciiLogo } from "../components/ascii-logo.js";
@@ -11,12 +11,19 @@ const CLIENT_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 interface ConnectScreenProps {
   initialUrl: string;
   onConnect: (client: DatalatheClient, url: string) => void;
+  onDownload?: () => void;
 }
 
-export function ConnectScreen({ initialUrl, onConnect }: ConnectScreenProps) {
+export function ConnectScreen({ initialUrl, onConnect, onDownload }: ConnectScreenProps) {
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [targetUrl, setTargetUrl] = useState(initialUrl);
+
+  useInput((input) => {
+    if (!connecting && input === "d" && onDownload) {
+      onDownload();
+    }
+  });
 
   const handleSubmit = async (value: string) => {
     const url = value.trim() || initialUrl;
@@ -59,7 +66,7 @@ export function ConnectScreen({ initialUrl, onConnect }: ConnectScreenProps) {
           <Text color={brand.error}>{error}</Text>
         )}
         <Text color={brand.muted} dimColor>
-          Press Enter to connect
+          Press Enter to connect · d to download binaries
         </Text>
       </Box>
     </Box>
