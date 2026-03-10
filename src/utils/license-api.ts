@@ -1,4 +1,6 @@
-const LICENSE_API = "https://license.datalathe.com";
+import https from "node:https";
+
+const LICENSE_API_HOST = "license.datalathe.com";
 
 export interface VersionsResponse {
   versions: string[];
@@ -13,39 +15,66 @@ export interface DownloadUrlsResponse {
   expiresIn: number;
 }
 
-async function licenseFetch(
-  path: string,
-  body: Record<string, string>
-): Promise<Response> {
-  try {
-    return await fetch(`${LICENSE_API}${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-  } catch (err) {
-    const cause = err instanceof Error ? err.cause : undefined;
-    const detail =
-      cause instanceof Error ? cause.message : String(err);
-    throw new Error(
-      `Could not reach license server (${detail}). Check your network connection.`
+function httpsPost(path: string, body: Record<string, unknown>): Promise<{ status: number; data: Record<string, unknown> }> {
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify(body);
+    const req = https.request(
+      {
+        hostname: LICENSE_API_HOST,
+        path,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(payload),
+        },
+        rejectUnauthorized: false,
+      } as https.RequestOptions,
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (chunk: Buffer) => chunks.push(chunk));
+        res.on("end", () => {
+          const raw = Buffer.concat(chunks).toString();
+          try {
+            resolve({
+              status: res.statusCode ?? 500,
+              data: JSON.parse(raw) as Record<string, unknown>,
+            });
+          } catch {
+            reject(new Error(`Invalid JSON response: ${raw.slice(0, 200)}`));
+          }
+        });
+      }
     );
-  }
+
+    req.on("error", (err) => {
+      reject(
+        new Error(
+          `Could not reach license server (${err.message}). Check your network connection.`
+        )
+      );
+    });
+
+    req.write(payload);
+    req.end();
+  });
 }
 
 export async function fetchVersions(
   licenseKey: string
 ): Promise<VersionsResponse> {
-  const res = await licenseFetch("/downloads/versions", { licenseKey });
+  const { status, data } = await httpsPost("/downloads/versions", {
+    licenseKey,
+  });
 
-  if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as Record<string, string>;
+  if (status >= 400) {
     throw new Error(
-      body.reason || body.error || `License validation failed (${res.status})`
+      (data.reason as string) ||
+        (data.error as string) ||
+        `License validation failed (${status})`
     );
   }
 
-  return (await res.json()) as VersionsResponse;
+  return data as unknown as VersionsResponse;
 }
 
 export async function fetchDownloadUrls(
@@ -53,18 +82,18 @@ export async function fetchDownloadUrls(
   version: string,
   platform: string
 ): Promise<DownloadUrlsResponse> {
-  const res = await licenseFetch("/downloads/urls", {
+  const { status, data } = await httpsPost("/downloads/urls", {
     licenseKey,
     version,
     platform,
   });
 
-  if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as Record<string, string>;
+  if (status >= 400) {
     throw new Error(
-      body.error || `Failed to get download URLs (${res.status})`
+      (data.error as string) ||
+        `Failed to get download URLs (${status})`
     );
   }
 
-  return (await res.json()) as DownloadUrlsResponse;
+  return data as unknown as DownloadUrlsResponse;
 }
