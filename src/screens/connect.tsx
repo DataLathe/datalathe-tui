@@ -2,8 +2,12 @@ import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
 import { TextInput, Spinner } from "@inkjs/ui";
 import { DatalatheClient } from "@datalathe/client";
+import { createRequire } from "node:module";
 import { AsciiLogo } from "../components/ascii-logo.js";
 import { brand } from "../theme.js";
+
+const require = createRequire(import.meta.url);
+const { version } = require("../../package.json") as { version: string };
 
 /** Request timeout in ms. Create-chip can take minutes. */
 const CLIENT_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
@@ -46,6 +50,7 @@ export function ConnectScreen({ initialUrl, onConnect, onDownload }: ConnectScre
   return (
     <Box flexDirection="column" alignItems="center" gap={1}>
       <AsciiLogo />
+      <Text color={brand.muted} dimColor>v{version}</Text>
       <Box flexDirection="column" gap={1} paddingTop={1} alignItems="center">
         <Text color={brand.text}>
           Enter DataLathe URL:
