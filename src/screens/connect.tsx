@@ -6,6 +6,7 @@ import { AsciiLogo } from "../components/ascii-logo.js";
 import { brand } from "../theme.js";
 import { currentVersion } from "../utils/check-update.js";
 import { useUpdateCheck } from "../hooks/use-update-check.js";
+import { useBinaryUpdateCheck } from "../hooks/use-binary-update-check.js";
 
 /** Request timeout in ms. Create-chip can take minutes. */
 const CLIENT_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
@@ -21,6 +22,7 @@ export function ConnectScreen({ initialUrl, onConnect, onDownload }: ConnectScre
   const [error, setError] = useState<string | null>(null);
   const [targetUrl, setTargetUrl] = useState(initialUrl);
   const update = useUpdateCheck();
+  const binaryUpdate = useBinaryUpdateCheck();
 
   useInput((input) => {
     if (!connecting && input === "d" && onDownload) {
@@ -52,7 +54,12 @@ export function ConnectScreen({ initialUrl, onConnect, onDownload }: ConnectScre
       <Text color={brand.muted} dimColor>v{currentVersion}</Text>
       {update && (
         <Text color={brand.cyan}>
-          Update available: v{update.latestVersion} — run <Text bold>npm i -g @datalathe/tui</Text> to update
+          TUI update: v{update.latestVersion} available — run <Text bold>npm i -g @datalathe/tui</Text>
+        </Text>
+      )}
+      {binaryUpdate && (
+        <Text color={brand.cyan}>
+          Engine update: v{binaryUpdate.latestVersion} available (installed: v{binaryUpdate.installedVersion}) — press <Text bold>d</Text> to update
         </Text>
       )}
       <Box flexDirection="column" gap={1} paddingTop={1} alignItems="center">
