@@ -2,12 +2,10 @@ import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
 import { TextInput, Spinner } from "@inkjs/ui";
 import { DatalatheClient } from "@datalathe/client";
-import { createRequire } from "node:module";
 import { AsciiLogo } from "../components/ascii-logo.js";
 import { brand } from "../theme.js";
-
-const require = createRequire(import.meta.url);
-const { version } = require("../../package.json") as { version: string };
+import { currentVersion } from "../utils/check-update.js";
+import { useUpdateCheck } from "../hooks/use-update-check.js";
 
 /** Request timeout in ms. Create-chip can take minutes. */
 const CLIENT_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
@@ -22,6 +20,7 @@ export function ConnectScreen({ initialUrl, onConnect, onDownload }: ConnectScre
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [targetUrl, setTargetUrl] = useState(initialUrl);
+  const update = useUpdateCheck();
 
   useInput((input) => {
     if (!connecting && input === "d" && onDownload) {
@@ -50,7 +49,12 @@ export function ConnectScreen({ initialUrl, onConnect, onDownload }: ConnectScre
   return (
     <Box flexDirection="column" alignItems="center" gap={1}>
       <AsciiLogo />
-      <Text color={brand.muted} dimColor>v{version}</Text>
+      <Text color={brand.muted} dimColor>v{currentVersion}</Text>
+      {update && (
+        <Text color={brand.cyan}>
+          Update available: v{update.latestVersion} — run <Text bold>npm i -g @datalathe/tui</Text> to update
+        </Text>
+      )}
       <Box flexDirection="column" gap={1} paddingTop={1} alignItems="center">
         <Text color={brand.text}>
           Enter DataLathe URL:
