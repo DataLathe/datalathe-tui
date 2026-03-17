@@ -170,6 +170,18 @@ export function DownloadBinariesScreen({
         await mkdir(join(configDir, "connections"), { recursive: true });
       }
 
+      // Save manifest so we can check for updates later
+      const manifest = JSON.stringify(
+        {
+          version: selectedVersion,
+          platform: selectedPlatform,
+          downloadedAt: new Date().toISOString(),
+        },
+        null,
+        4,
+      );
+      await writeFile(join(directory, ".manifest.json"), manifest + "\n");
+
       setStep("done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Download failed");
