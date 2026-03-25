@@ -13,6 +13,7 @@ type Step =
   | "table"
   | "query"
   | "file-path"
+  | "s3-path"
   | "chip-name"
   | "tags"
   | "partition"
@@ -33,6 +34,7 @@ const INPUT_ACTIVE_STEPS: Step[] = [
   "table",
   "query",
   "file-path",
+  "s3-path",
   "chip-name",
   "tags",
   "partition",
@@ -64,12 +66,13 @@ export function CreateChipScreen({
   // If coming from sidebar with a source pre-selected, skip to query
   const initialStep: Step = initialSource ? "query" : "choose-source";
   const [step, setStep] = useState<Step>(initialStep);
-  const [sourceType, setSourceType] = useState<"database" | "file">(
+  const [sourceType, setSourceType] = useState<"database" | "file" | "s3">(
     initialSource ? "database" : "database",
   );
   const [source, setSource] = useState(initialSource ?? "");
   const [tableName, setTableName] = useState(initialTable ?? "");
   const [filePath, setFilePath] = useState("");
+  const [s3Path, setS3Path] = useState("");
   const [partitionBy, setPartitionBy] = useState("");
   const [partitionQuery, setPartitionQuery] = useState("");
   const [partitionValues, setPartitionValues] = useState("");
@@ -85,6 +88,10 @@ export function CreateChipScreen({
   const getDefaultChipName = (): string => {
     if (sourceType === "file") {
       const fileName = filePath.split("/").pop() ?? filePath;
+      return fileName.replace(/\.[^.]+$/, "");
+    }
+    if (sourceType === "s3") {
+      const fileName = s3Path.split("/").pop() ?? s3Path;
       return fileName.replace(/\.[^.]+$/, "");
     }
     return tableName || source;
@@ -151,6 +158,8 @@ export function CreateChipScreen({
       const name = chipName || getDefaultChipName();
       if (sourceType === "file") {
         id = await client.createChipFromFile(filePath, undefined, partition, name, columnReplace, storageConfig);
+      } else if (sourceType === "s3") {
+        id = await client.createChipFromS3(s3Path, undefined, name, columnReplace, storageConfig);
       } else {
         id = await client.createChip(source, query, tableName, partition, name, columnReplace, storageConfig);
       }
@@ -179,11 +188,15 @@ export function CreateChipScreen({
             options={[
               { label: "Database", value: "database" },
               { label: "File (CSV, Parquet, etc.)", value: "file" },
+              { label: "S3 Object (CSV, Parquet, etc.)", value: "s3" },
             ]}
             onChange={(value) => {
               if (value === "file") {
                 setSourceType("file");
                 setStep("file-path");
+              } else if (value === "s3") {
+                setSourceType("s3");
+                setStep("s3-path");
               } else {
                 setSourceType("database");
                 setStep("select-db");
@@ -242,6 +255,25 @@ export function CreateChipScreen({
         <Box flexDirection="column" gap={1}>
           <Text color={brand.text}>File path (Tab to complete):</Text>
           <FilePathInput onSubmit={(p) => { setFilePath(p); setStep("chip-name"); }} />
+          {error && <Text color={brand.error}>{error}</Text>}
+        </Box>
+      )}
+
+      {step === "s3-path" && (
+        <Box flexDirection="column" gap={1}>
+          <Text color={brand.text}>S3 path:</Text>
+          <Box>
+            <Text color={brand.violet}>{"❯ "}</Text>
+            <TextInput
+              placeholder="s3://bucket/path/file.csv"
+              onSubmit={(v) => {
+                if (v.trim()) {
+                  setS3Path(v.trim());
+                  setStep("chip-name");
+                }
+              }}
+            />
+          </Box>
           {error && <Text color={brand.error}>{error}</Text>}
         </Box>
       )}
@@ -459,12 +491,17 @@ export function CreateChipScreen({
             </Text>
             <Text>
               <Text color={brand.muted}>Source Type  </Text>
-              <Text color={brand.text}>{sourceType === "file" ? "File" : "Database"}</Text>
+              <Text color={brand.text}>{sourceType === "file" ? "File" : sourceType === "s3" ? "S3" : "Database"}</Text>
             </Text>
             {sourceType === "file" ? (
               <Text>
                 <Text color={brand.muted}>File Path   </Text>
                 <Text color={brand.text}>{filePath}</Text>
+              </Text>
+            ) : sourceType === "s3" ? (
+              <Text>
+                <Text color={brand.muted}>S3 Path     </Text>
+                <Text color={brand.text}>{s3Path}</Text>
               </Text>
             ) : (
               <>
