@@ -16,6 +16,7 @@ import { ChipDetailScreen } from "./screens/chip-detail.js";
 import { QueryScreen } from "./screens/query.js";
 import { DeleteChipScreen } from "./screens/delete-chip.js";
 import { ExtractTablesScreen } from "./screens/extract-tables.js";
+import { ConnectionsScreen } from "./screens/connections.js";
 import { DownloadBinariesScreen } from "./screens/download-binaries.js";
 import { brand } from "./theme.js";
 
@@ -29,6 +30,7 @@ const SCREEN_TITLES: Record<string, string> = {
   query: "Query Chips",
   "delete-chip": "Delete Chip",
   "extract-tables": "Extract Tables",
+  connections: "Connections",
   "download-binaries": "Download Binaries",
 };
 
@@ -181,6 +183,13 @@ export function App({ url }: AppProps) {
             onBack={goHome}
             onInputActive={setInputActive}
             isFocused={mainFocused}
+          />
+        );
+      case "connections":
+        return (
+          <ConnectionsScreen
+            onBack={goBack}
+            onInputActive={setInputActive}
           />
         );
       case "download-binaries":
