@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text } from "ink";
-import { TextInput, Spinner, Select, MultiSelect } from "@inkjs/ui";
+import { TextInput, Spinner, MultiSelect } from "@inkjs/ui";
+import { MenuSelect } from "../components/menu-select.js";
 import { useClient } from "../hooks/use-client.js";
 import { useAsync } from "../hooks/use-async.js";
 import { useTerminalSize } from "../hooks/use-terminal-size.js";
@@ -247,11 +248,12 @@ export function CreateChipFromChipScreen({
             </Text>
           </Box>
           <Box marginTop={1}>
-            <Select
+            <MenuSelect
               options={[
                 { label: "Create Chip", value: "create" },
                 { label: "Go Back", value: "back" },
               ]}
+              isDisabled={!isFocused}
               onChange={(value) => {
                 if (value === "create") {
                   handleCreate();

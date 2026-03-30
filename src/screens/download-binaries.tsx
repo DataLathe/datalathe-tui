@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text, useInput } from "ink";
-import { TextInput, Spinner, Select } from "@inkjs/ui";
+import { TextInput, Spinner } from "@inkjs/ui";
+import { MenuSelect } from "../components/menu-select.js";
 import { brand } from "../theme.js";
 import {
   fetchVersions,
@@ -12,10 +13,11 @@ import {
   type DownloadProgress,
 } from "../utils/download.js";
 import { join, dirname } from "node:path";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 
 type Step =
+  | "checking-license"
   | "license-key"
   | "loading-versions"
   | "select-version"
@@ -31,6 +33,7 @@ type Step =
 const INPUT_ACTIVE_STEPS: Step[] = ["license-key", "select-directory"];
 
 const DEFAULT_DIR = join(homedir(), ".datalathe", "bin");
+const DEFAULT_LICENSE_PATH = join(homedir(), ".datalathe", "config", "license.json");
 
 function detectPlatform(): string {
   if (process.platform === "darwin" && process.arch === "arm64")
@@ -63,13 +66,15 @@ function defaultChipConfig(baseDir: string): object {
 interface DownloadBinariesScreenProps {
   onBack: () => void;
   onInputActive?: (active: boolean) => void;
+  isFocused?: boolean;
 }
 
 export function DownloadBinariesScreen({
   onBack,
   onInputActive,
+  isFocused = true,
 }: DownloadBinariesScreenProps) {
-  const [step, setStep] = useState<Step>("license-key");
+  const [step, setStep] = useState<Step>("checking-license");
   const [licenseKey, setLicenseKey] = useState("");
   const [versions, setVersions] = useState<string[]>([]);
   const [platforms, setPlatforms] = useState<string[]>([]);
@@ -81,6 +86,37 @@ export function DownloadBinariesScreen({
   const [progress, setProgress] = useState<DownloadProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [failedStep, setFailedStep] = useState<Step>("license-key");
+
+  const loadVersions = async (key: string) => {
+    setLicenseKey(key);
+    setStep("loading-versions");
+    try {
+      const data = await fetchVersions(key);
+      setVersions(data.versions);
+      setPlatforms(data.platforms);
+      setStep("select-version");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch versions");
+      setFailedStep("loading-versions");
+      setStep("error");
+    }
+  };
+
+  // Check for existing license file on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = JSON.parse(await readFile(DEFAULT_LICENSE_PATH, "utf-8"));
+        if (data.licenseKey) {
+          loadVersions(data.licenseKey);
+          return;
+        }
+      } catch {
+        // No license file or invalid — fall through to manual entry
+      }
+      setStep("license-key");
+    })();
+  }, []);
 
   useEffect(() => {
     onInputActive?.(INPUT_ACTIVE_STEPS.includes(step));
@@ -108,18 +144,7 @@ export function DownloadBinariesScreen({
   const handleLicenseSubmit = async (value: string) => {
     const key = value.trim();
     if (!key) return;
-    setLicenseKey(key);
-    setStep("loading-versions");
-    try {
-      const data = await fetchVersions(key);
-      setVersions(data.versions);
-      setPlatforms(data.platforms);
-      setStep("select-version");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch versions");
-      setFailedStep("loading-versions");
-      setStep("error");
-    }
+    loadVersions(key);
   };
 
   const configDir = join(dirname(directory), "config");
@@ -198,6 +223,10 @@ export function DownloadBinariesScreen({
         Download Binaries
       </Text>
 
+      {step === "checking-license" && (
+        <Spinner label="Checking for existing license..." />
+      )}
+
       {step === "license-key" && (
         <Box flexDirection="column" gap={1}>
           <Text color={brand.text}>Enter your license key:</Text>
@@ -218,8 +247,10 @@ export function DownloadBinariesScreen({
       {step === "select-version" && (
         <Box flexDirection="column" gap={1}>
           <Text color={brand.text}>Select version:</Text>
-          <Select
+          <MenuSelect
+            isDisabled={!isFocused}
             options={versions.map((v) => ({ label: v, value: v }))}
+            visibleCount={10}
             onChange={(value) => {
               setSelectedVersion(value);
               setStep("select-platform");
@@ -232,15 +263,16 @@ export function DownloadBinariesScreen({
         <Box flexDirection="column" gap={1}>
           <Text color={brand.muted}>Version: {selectedVersion}</Text>
           <Text color={brand.text}>Select platform:</Text>
-          <Select
+          <MenuSelect
+            isDisabled={!isFocused}
             options={[
               // Put detected platform first so it's focused by default
               ...platforms.filter((p) => p === detectedPlatform),
               ...platforms.filter((p) => p !== detectedPlatform),
             ].map((p) => ({
-              label:
-                p === detectedPlatform ? `${p} (detected)` : p,
+              label: p,
               value: p,
+              description: p === detectedPlatform ? "detected" : undefined,
             }))}
             onChange={(value) => {
               setSelectedPlatform(value);
@@ -279,7 +311,8 @@ export function DownloadBinariesScreen({
           <Text color={brand.muted}>
             Saves license key to {join(dirname(directory), "config", "license.json")}
           </Text>
-          <Select
+          <MenuSelect
+            isDisabled={!isFocused}
             options={[
               { label: "Yes", value: "yes" },
               { label: "No", value: "no" },
@@ -298,7 +331,8 @@ export function DownloadBinariesScreen({
           <Text color={brand.muted}>
             Saves engine.conf.json and chip.conf.json to {join(dirname(directory), "config")}/
           </Text>
-          <Select
+          <MenuSelect
+            isDisabled={!isFocused}
             options={[
               { label: "Yes", value: "yes" },
               { label: "No", value: "no" },
@@ -343,7 +377,8 @@ export function DownloadBinariesScreen({
             </Text>
           </Box>
           <Box marginTop={1}>
-            <Select
+            <MenuSelect
+              isDisabled={!isFocused}
               options={[
                 { label: "Download", value: "download" },
                 { label: "Go Back", value: "back" },

@@ -1,9 +1,25 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text } from "ink";
-import { TextInput, Select, Spinner } from "@inkjs/ui";
+import { TextInput, Spinner } from "@inkjs/ui";
 import { useClient } from "../hooks/use-client.js";
+import { MenuSelect } from "../components/menu-select.js";
 import { brand } from "../theme.js";
 import type { ConnectionInfo } from "@datalathe/client";
+
+function extractErrorMessage(e: unknown): string {
+  if (!(e instanceof Error)) return "Unknown error";
+  // Try to parse the JSON error body from DatalatheApiError
+  const apiErr = e as { responseBody?: string };
+  if (apiErr.responseBody) {
+    try {
+      const body = JSON.parse(apiErr.responseBody);
+      if (body.error) return body.error;
+    } catch {
+      // not JSON, fall through
+    }
+  }
+  return e.message;
+}
 
 type Step =
   | "list"
@@ -23,9 +39,11 @@ const INPUT_STEPS: Step[] = ["add-alias", "add-host", "add-port", "add-database"
 interface ConnectionsScreenProps {
   onBack: () => void;
   onInputActive?: (active: boolean) => void;
+  isFocused?: boolean;
+  onConnectionsChanged?: () => void;
 }
 
-export function ConnectionsScreen({ onBack, onInputActive }: ConnectionsScreenProps) {
+export function ConnectionsScreen({ onBack, onInputActive, isFocused = true, onConnectionsChanged }: ConnectionsScreenProps) {
   const client = useClient();
   const [step, setStep] = useState<Step>("list");
   const [connections, setConnections] = useState<ConnectionInfo[]>([]);
@@ -55,7 +73,7 @@ export function ConnectionsScreen({ onBack, onInputActive }: ConnectionsScreenPr
       const conns = await client.listConnections();
       setConnections(conns);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load connections");
+      setError(extractErrorMessage(e) || "Failed to load connections");
     }
     setLoading(false);
   };
@@ -73,17 +91,18 @@ export function ConnectionsScreen({ onBack, onInputActive }: ConnectionsScreenPr
     setPassword("");
   };
 
-  const handleSave = async () => {
+  const handleSave = async (pw?: string) => {
     setStep("saving");
     setError(null);
     try {
-      await client.upsertConnection(alias, { host, port, database, user, password });
+      await client.upsertConnection(alias, { host, port, database, user, password: pw ?? password });
       setMessage(`Connection '${alias}' saved`);
       resetForm();
       await loadConnections();
+      onConnectionsChanged?.();
       setStep("list");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save connection");
+      setError(extractErrorMessage(e) || "Failed to save connection");
       setStep("list");
     }
   };
@@ -96,7 +115,7 @@ export function ConnectionsScreen({ onBack, onInputActive }: ConnectionsScreenPr
       const result = await client.testConnection(a);
       setMessage(`Connection '${a}': ${result.status}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Test failed");
+      setError(extractErrorMessage(e) || "Test failed");
     }
     setStep("list");
   };
@@ -107,8 +126,9 @@ export function ConnectionsScreen({ onBack, onInputActive }: ConnectionsScreenPr
       await client.deleteConnection(a);
       setMessage(`Connection '${a}' deleted`);
       await loadConnections();
+      onConnectionsChanged?.();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Delete failed");
+      setError(extractErrorMessage(e) || "Delete failed");
     }
     setStep("list");
   };
@@ -139,13 +159,14 @@ export function ConnectionsScreen({ onBack, onInputActive }: ConnectionsScreenPr
           {message && <Text color={brand.success}>{message}</Text>}
           {error && <Text color={brand.error}>{error}</Text>}
 
-          <Select
+          <MenuSelect
+            isDisabled={!isFocused}
             options={[
-              { label: "Add Connection", value: "add" },
+              { label: "Add Connection", value: "add", description: "Configure a new database connection" },
               ...(connections.length > 0
                 ? [
-                    { label: "Test Connection", value: "test" },
-                    { label: "Delete Connection", value: "delete" },
+                    { label: "Test Connection", value: "test", description: "Verify a connection works" },
+                    { label: "Delete Connection", value: "delete", description: "Remove a saved connection" },
                   ]
                 : []),
               { label: "Back", value: "back" },
@@ -159,7 +180,6 @@ export function ConnectionsScreen({ onBack, onInputActive }: ConnectionsScreenPr
               } else if (value === "test" || value === "delete") {
                 setSelectedAlias(null);
                 setStep("action");
-                // Store action type in a hacky way via selectedAlias prefix
                 setSelectedAlias(value);
               } else {
                 onBack();
@@ -172,11 +192,14 @@ export function ConnectionsScreen({ onBack, onInputActive }: ConnectionsScreenPr
       {step === "action" && (
         <Box flexDirection="column" gap={1}>
           <Text color={brand.text}>Select connection:</Text>
-          <Select
+          <MenuSelect
+            isDisabled={!isFocused}
             options={connections.map((c) => ({
-              label: `${c.alias} (${c.host}:${c.port})`,
+              label: c.alias,
               value: c.alias,
+              description: `${c.host}:${c.port}`,
             }))}
+            visibleCount={10}
             onChange={(value) => {
               if (selectedAlias === "test") {
                 handleTest(value);
@@ -248,7 +271,7 @@ export function ConnectionsScreen({ onBack, onInputActive }: ConnectionsScreenPr
           <Text color={brand.text}>Password:</Text>
           <Box>
             <Text color={brand.violet}>{"❯ "}</Text>
-            <TextInput placeholder="••••••••" onSubmit={(v) => { setPassword(v); handleSave(); }} />
+            <TextInput placeholder="••••••••" onSubmit={(v) => { setPassword(v); handleSave(v); }} />
           </Box>
         </Box>
       )}

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
-import { Select, Spinner } from "@inkjs/ui";
+import { Spinner } from "@inkjs/ui";
+import { MenuSelect } from "../components/menu-select.js";
 import type { Chip } from "@datalathe/client";
 import { useClient } from "../hooks/use-client.js";
 import { useAsync } from "../hooks/use-async.js";
@@ -98,21 +99,15 @@ export function DeleteChipScreen({
           <Text color={brand.muted}>Select a chip to delete:</Text>
           <Text color={brand.violet} bold>{chipHeader(cols, 2)}</Text>
           <Text color={brand.border}>{"  " + "─".repeat(Math.min(panelWidth - 4, panelWidth))}</Text>
-          {isFocused ? (
-            <Select
-              options={options}
-              onChange={(value) => {
-                setSelectedChipId(value);
-                setPhase("confirm");
-              }}
-            />
-          ) : (
-            <Box flexDirection="column">
-              {options.map((opt) => (
-                <Text key={opt.value} color={brand.text}>{"  "}{opt.label}</Text>
-              ))}
-            </Box>
-          )}
+          <MenuSelect
+            options={options}
+            visibleCount={10}
+            isDisabled={!isFocused}
+            onChange={(value) => {
+              setSelectedChipId(value);
+              setPhase("confirm");
+            }}
+          />
         </Box>
       )}
 

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
-import { Spinner, Select } from "@inkjs/ui";
+import { Spinner } from "@inkjs/ui";
+import { MenuSelect } from "../components/menu-select.js";
 import { useClient } from "../hooks/use-client.js";
 import { useAsync } from "../hooks/use-async.js";
 import { useTerminalSize } from "../hooks/use-terminal-size.js";
@@ -115,21 +116,12 @@ export function DatabaseTablesScreen({
       <Text color={brand.cyan} bold>
         {databaseName} — Tables ({tables.size})
       </Text>
-      {isFocused ? (
-        <Select
-          options={options}
-          onChange={(value) => setSelectedTable(value)}
-        />
-      ) : (
-        <Box flexDirection="column">
-          {options.map((opt) => (
-            <Text key={opt.value} color={brand.text}>
-              {"  "}{opt.label}{" "}
-              <Text color={brand.muted}>{opt.description}</Text>
-            </Text>
-          ))}
-        </Box>
-      )}
+      <MenuSelect
+        options={options}
+        visibleCount={15}
+        isDisabled={!isFocused}
+        onChange={(value) => setSelectedTable(value)}
+      />
     </Box>
   );
 }
