@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { execSync } from "child_process";
 import { Box, Text, useInput } from "ink";
-import { TextInput, Spinner, MultiSelect, Select } from "@inkjs/ui";
+import { TextInput, Spinner, MultiSelect } from "@inkjs/ui";
+import { MenuSelect } from "../components/menu-select.js";
 import { DatalatheResultSet } from "@datalathe/client";
 import type { SchemaField, ReportTiming } from "@datalathe/client";
 import { useClient } from "../hooks/use-client.js";
@@ -206,11 +207,12 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
         <Text color={brand.muted}>
           Sanitize MySQL/MariaDB syntax before executing?
         </Text>
-        <Select
+        <MenuSelect
           options={[
-            { label: "No — run query as-is", value: "no" },
-            { label: "Yes — sanitize MySQL/MariaDB syntax", value: "yes" },
+            { label: "No", value: "no", description: "Run query as-is" },
+            { label: "Yes", value: "yes", description: "Sanitize MySQL/MariaDB syntax" },
           ]}
+          isDisabled={!isFocused}
           onChange={(value) => {
             setTransformQuery(value === "yes");
             setStep("sql");
