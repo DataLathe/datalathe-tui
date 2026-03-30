@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text } from "ink";
-import { TextInput, Spinner, Select } from "@inkjs/ui";
+import { TextInput, Spinner } from "@inkjs/ui";
 import { useClient } from "../hooks/use-client.js";
 import { useAsync } from "../hooks/use-async.js";
 import { FilePathInput } from "../components/file-path-input.js";
+import { MenuSelect } from "../components/menu-select.js";
 import { brand } from "../theme.js";
 import type { DuckDBDatabase, Partition, S3StorageConfig } from "@datalathe/client";
 
@@ -52,6 +53,7 @@ interface CreateChipScreenProps {
   onDone: (chipId: string) => void;
   onBack: () => void;
   onInputActive?: (active: boolean) => void;
+  isFocused?: boolean;
 }
 
 export function CreateChipScreen({
@@ -60,6 +62,7 @@ export function CreateChipScreen({
   onDone,
   onBack,
   onInputActive,
+  isFocused = true,
 }: CreateChipScreenProps) {
   const client = useClient();
 
@@ -184,11 +187,12 @@ export function CreateChipScreen({
       {step === "choose-source" && (
         <Box flexDirection="column" gap={1}>
           <Text color={brand.text}>Select source type:</Text>
-          <Select
+          <MenuSelect
+            isDisabled={!isFocused}
             options={[
-              { label: "Database", value: "database" },
-              { label: "File (CSV, Parquet, etc.)", value: "file" },
-              { label: "S3 Object (CSV, Parquet, etc.)", value: "s3" },
+              { label: "Database", value: "database", description: "Query a connected database" },
+              { label: "File", value: "file", description: "CSV, Parquet, or other local file" },
+              { label: "S3 Object", value: "s3", description: "CSV, Parquet, or other file in S3" },
             ]}
             onChange={(value) => {
               if (value === "file") {
@@ -206,7 +210,7 @@ export function CreateChipScreen({
         </Box>
       )}
 
-      {step === "select-db" && <DatabaseSelect onSelect={(db) => { setSource(db); setStep("table"); }} />}
+      {step === "select-db" && <DatabaseSelect onSelect={(db) => { setSource(db); setStep("table"); }} isFocused={isFocused} />}
 
       {step === "table" && (
         <Box flexDirection="column" gap={1}>
@@ -340,11 +344,12 @@ export function CreateChipScreen({
         <Box flexDirection="column" gap={1}>
           <Text color={brand.muted}>Partition by: {partitionBy}</Text>
           <Text color={brand.text}>How should partition values be determined?</Text>
-          <Select
+          <MenuSelect
+            isDisabled={!isFocused}
             options={[
-              { label: "Column only — no specific values", value: "column-only" },
-              { label: "Provide values — comma-separated list", value: "values" },
-              { label: "Use a query — SQL to derive values", value: "query" },
+              { label: "Column only", value: "column-only", description: "No specific values" },
+              { label: "Provide values", value: "values", description: "Comma-separated list" },
+              { label: "Use a query", value: "query", description: "SQL to derive values" },
             ]}
             onChange={(value) => {
               if (value === "column-only") {
@@ -417,10 +422,11 @@ export function CreateChipScreen({
       {step === "storage-config" && (
         <Box flexDirection="column" gap={1}>
           <Text color={brand.text}>Configure S3 storage?</Text>
-          <Select
+          <MenuSelect
+            isDisabled={!isFocused}
             options={[
-              { label: "No — use defaults", value: "no" },
-              { label: "Yes — custom bucket/prefix/TTL", value: "yes" },
+              { label: "No", value: "no", description: "Use defaults" },
+              { label: "Yes", value: "yes", description: "Custom bucket/prefix/TTL" },
             ]}
             onChange={(value) => {
               if (value === "yes") {
@@ -597,7 +603,8 @@ export function CreateChipScreen({
             )}
           </Box>
           <Box marginTop={1}>
-            <Select
+            <MenuSelect
+              isDisabled={!isFocused}
               options={[
                 { label: "Create Chip", value: "create" },
                 { label: "Go Back", value: "back" },
@@ -634,7 +641,7 @@ export function CreateChipScreen({
   );
 }
 
-function DatabaseSelect({ onSelect }: { onSelect: (db: string) => void }) {
+function DatabaseSelect({ onSelect, isFocused = true }: { onSelect: (db: string) => void; isFocused?: boolean }) {
   const client = useClient();
   const { data, loading, error } = useAsync(
     () => client.getDatabases(),
@@ -657,7 +664,7 @@ function DatabaseSelect({ onSelect }: { onSelect: (db: string) => void }) {
   return (
     <Box flexDirection="column" gap={1}>
       <Text color={brand.text}>Select database:</Text>
-      <Select options={options} onChange={onSelect} />
+      <MenuSelect isDisabled={!isFocused} options={options} visibleCount={10} onChange={onSelect} />
     </Box>
   );
 }
