@@ -10,6 +10,7 @@ export type Screen =
   | "query"
   | "delete-chip"
   | "extract-tables"
+  | "connections"
   | "download-binaries";
 
 export interface NavigationState {

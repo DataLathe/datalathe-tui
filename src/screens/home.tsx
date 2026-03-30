@@ -36,6 +36,11 @@ const menuItems = [
     description: "Remove a chip and its associated data",
   },
   {
+    label: "Connections",
+    value: "connections" as Screen,
+    description: "Manage database connections",
+  },
+  {
     label: "Download Binaries",
     value: "download-binaries" as Screen,
     description: "Download engine and chip-manager",
