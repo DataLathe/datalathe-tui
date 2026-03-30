@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Text } from "ink";
-import { Select } from "@inkjs/ui";
+import { MenuSelect } from "../components/menu-select.js";
 import { brand } from "../theme.js";
 import type { Screen } from "../hooks/use-navigation.js";
 
@@ -60,21 +60,11 @@ export function HomeScreen({ onNavigate, isFocused }: HomeScreenProps) {
         <Text color={brand.violet} bold>
           Actions:
         </Text>
-        {isFocused ? (
-          <Select
-            options={menuItems}
-            onChange={(value) => onNavigate(value as Screen)}
-          />
-        ) : (
-          <Box flexDirection="column">
-            {menuItems.map((item) => (
-              <Text key={item.value} color={brand.text}>
-                {"  "}{item.label}{" "}
-                <Text color={brand.muted}>{item.description}</Text>
-              </Text>
-            ))}
-          </Box>
-        )}
+        <MenuSelect
+          options={menuItems}
+          onChange={(value) => onNavigate(value as Screen)}
+          isDisabled={!isFocused}
+        />
       </Box>
     </Box>
   );
