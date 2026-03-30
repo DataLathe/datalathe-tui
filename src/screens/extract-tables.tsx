@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text, useInput } from "ink";
-import { TextInput, Spinner, Select } from "@inkjs/ui";
+import { TextInput, Spinner } from "@inkjs/ui";
+import { MenuSelect } from "../components/menu-select.js";
 import { useClient } from "../hooks/use-client.js";
 import { brand } from "../theme.js";
 
@@ -72,11 +73,12 @@ export function ExtractTablesScreen({ onBack, onInputActive, isFocused }: Extrac
         <Text color={brand.muted}>
           Transform MySQL/MariaDB syntax to DuckDB before extracting?
         </Text>
-        <Select
+        <MenuSelect
           options={[
-            { label: "No — parse query as-is", value: "no" },
-            { label: "Yes — transform MySQL/MariaDB → DuckDB", value: "yes" },
+            { label: "No", value: "no", description: "Parse query as-is" },
+            { label: "Yes", value: "yes", description: "Transform MySQL/MariaDB → DuckDB" },
           ]}
+          isDisabled={!isFocused}
           onChange={(value) => {
             setTransform(value === "yes");
             setStep("sql");
