@@ -127,6 +127,7 @@ export function App({ url }: AppProps) {
             onDone={(chipId) => navigate("chip-detail", { chipId })}
             onBack={goBack}
             onInputActive={setInputActive}
+            isFocused={mainFocused}
           />
         );
       case "create-chip-from-chip":
@@ -190,6 +191,8 @@ export function App({ url }: AppProps) {
           <ConnectionsScreen
             onBack={goBack}
             onInputActive={setInputActive}
+            isFocused={mainFocused}
+            onConnectionsChanged={() => setSidebarRefreshKey((k) => k + 1)}
           />
         );
       case "download-binaries":
@@ -197,6 +200,7 @@ export function App({ url }: AppProps) {
           <DownloadBinariesScreen
             onBack={goBack}
             onInputActive={setInputActive}
+            isFocused={mainFocused}
           />
         );
       default:
