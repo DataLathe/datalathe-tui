@@ -37,17 +37,17 @@ export function DatabasesTree({ client, isFocused, onSelectTable, height }: Data
   // Build flat list of visible nodes
   const nodes: TreeNode[] = [];
   for (const db of databases) {
-    nodes.push({ type: "database", name: db.database_name, databaseName: db.database_name });
-    if (expanded.has(db.database_name)) {
-      const tables = schemas.get(db.database_name);
+    nodes.push({ type: "database", name: db.databaseName, databaseName: db.databaseName });
+    if (expanded.has(db.databaseName)) {
+      const tables = schemas.get(db.databaseName);
       if (tables) {
-        const tableNames = [...new Set(tables.map((t) => `${t.schema_name}.${t.table_name}`))];
+        const tableNames = [...new Set(tables.map((t) => `${t.schemaName}.${t.tableName}`))];
         for (const tn of tableNames) {
-          const cols = tables.filter((t) => `${t.schema_name}.${t.table_name}` === tn);
+          const cols = tables.filter((t) => `${t.schemaName}.${t.tableName}` === tn);
           nodes.push({
             type: "table",
             name: tn,
-            databaseName: db.database_name,
+            databaseName: db.databaseName,
             columnCount: cols.length,
           });
         }

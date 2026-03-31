@@ -34,9 +34,9 @@ export function ExtractTablesScreen({ onBack, onInputActive, isFocused }: Extrac
     setError(null);
 
     try {
-      const result = await client.extractTablesWithTransform(rawQuery, transform || undefined);
+      const result = await client.queries.extractTablesWithTransform(rawQuery, transform || undefined);
       setTables(result.tables);
-      setTransformedQuery(result.transformed_query);
+      setTransformedQuery(result.transformedQuery);
       setStep("results");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Extraction failed");
