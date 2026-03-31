@@ -34,7 +34,7 @@ export function ChipDetailScreen({
 }: ChipDetailScreenProps) {
   const client = useClient();
   const { data, loading, error, refetch } = useAsync(
-    () => client.listChips(),
+    () => client.chips.list(),
     [chipId],
   );
 
@@ -46,7 +46,7 @@ export function ChipDetailScreen({
     if (deleteState.phase === "confirming") {
       if (input === "y") {
         setDeleteState({ phase: "deleting" });
-        client.deleteChip(chipId).then(() => {
+        client.chips.delete(chipId).then(() => {
           onDeleted();
         }).catch((err: unknown) => {
           setDeleteState({
@@ -80,12 +80,12 @@ export function ChipDetailScreen({
   }
 
   const allChips = data?.chips ?? [];
-  const meta = (data?.metadata ?? []).find((m) => m.chip_id === chipId);
-  const chipTags = (data?.tags ?? []).filter((t: ChipTag) => t.chip_id === chipId);
+  const meta = (data?.metadata ?? []).find((m) => m.chipId === chipId);
+  const chipTags = (data?.tags ?? []).filter((t: ChipTag) => t.chipId === chipId);
 
   // Main chip: where chip_id === sub_chip_id
   const mainChip = allChips.find(
-    (c: Chip) => c.chip_id === chipId && c.chip_id === c.sub_chip_id,
+    (c: Chip) => c.chipId === chipId && c.chipId === c.subChipId,
   );
 
   // Other checked chips for context
@@ -116,7 +116,7 @@ export function ChipDetailScreen({
           <Text>
             <Text color={brand.muted}>Created: </Text>
             <Text color={brand.text}>
-              {new Date(meta.created_at * 1000).toLocaleString()}
+              {new Date(meta.createdAt * 1000).toLocaleString()}
             </Text>
           </Text>
         </Box>
@@ -129,17 +129,17 @@ export function ChipDetailScreen({
           </Text>
           <Text>
             <Text color={brand.muted}>Table: </Text>
-            <Text color={brand.violet}>{mainChip.table_name}</Text>
+            <Text color={brand.violet}>{mainChip.tableName}</Text>
           </Text>
           <Text>
             <Text color={brand.muted}>Partition: </Text>
-            <Text color={brand.text}>{mainChip.partition_value || "—"}</Text>
+            <Text color={brand.text}>{mainChip.partitionValue || "—"}</Text>
           </Text>
-          {mainChip.created_at && (
+          {mainChip.createdAt && (
             <Text>
               <Text color={brand.muted}>Created: </Text>
               <Text color={brand.text}>
-                {new Date(mainChip.created_at * 1000).toLocaleString()}
+                {new Date(mainChip.createdAt * 1000).toLocaleString()}
               </Text>
             </Text>
           )}

@@ -31,12 +31,12 @@ export interface ChipColumnWidths {
 
 /** Check whether any chip in the list has sub-chips. */
 export function hasAnySubChips(allChips: Chip[]): boolean {
-  return allChips.some((c) => c.chip_id !== c.sub_chip_id);
+  return allChips.some((c) => c.chipId !== c.subChipId);
 }
 
 /** Check whether any chip in the list has partition values. */
 export function hasAnyPartitions(allChips: Chip[]): boolean {
-  return allChips.some((c) => c.partition_value);
+  return allChips.some((c) => c.partitionValue);
 }
 
 /** Pre-index chips and tags by chip_id for O(1) lookups. */
@@ -48,15 +48,15 @@ export interface ChipIndex {
 export function buildChipIndex(allChips: Chip[], allTags: ChipTag[]): ChipIndex {
   const chipsByChipId = new Map<string, Chip[]>();
   for (const c of allChips) {
-    const list = chipsByChipId.get(c.chip_id);
+    const list = chipsByChipId.get(c.chipId);
     if (list) list.push(c);
-    else chipsByChipId.set(c.chip_id, [c]);
+    else chipsByChipId.set(c.chipId, [c]);
   }
   const tagsByChipId = new Map<string, ChipTag[]>();
   for (const t of allTags) {
-    const list = tagsByChipId.get(t.chip_id);
+    const list = tagsByChipId.get(t.chipId);
     if (list) list.push(t);
-    else tagsByChipId.set(t.chip_id, [t]);
+    else tagsByChipId.set(t.chipId, [t]);
   }
   return { chipsByChipId, tagsByChipId };
 }
@@ -65,7 +65,7 @@ export function buildChipIndex(allChips: Chip[], allTags: ChipTag[]): ChipIndex 
 export function partitionSummary(chipId: string, index: ChipIndex): string {
   const chips = index.chipsByChipId.get(chipId) ?? [];
   const values = [...new Set(
-    chips.filter((c) => c.partition_value).map((c) => c.partition_value),
+    chips.filter((c) => c.partitionValue).map((c) => c.partitionValue),
   )];
   if (values.length === 0) return "\u2014";
   if (values.length <= 2) return values.join(", ");
@@ -82,7 +82,7 @@ export function tagSummary(chipId: string, index: ChipIndex): string {
 /** Count sub-chips for a given chip ID. */
 export function subChipCount(chipId: string, index: ChipIndex): number {
   const chips = index.chipsByChipId.get(chipId) ?? [];
-  return chips.filter((c) => c.chip_id !== c.sub_chip_id).length;
+  return chips.filter((c) => c.chipId !== c.subChipId).length;
 }
 
 export interface ChipColumnsOptions {
@@ -125,13 +125,13 @@ export function chipLabel(
 ): string {
   const chips = index.chipsByChipId.get(id) ?? [];
   const name = meta?.name ?? id.slice(0, 12);
-  const tables = [...new Set(chips.map((c) => c.table_name))];
+  const tables = [...new Set(chips.map((c) => c.tableName))];
   const table = tables.length > 0 ? tables.join(", ") : "\u2014";
-  const created = meta ? formatDate(meta.created_at) : "\u2014";
+  const created = meta ? formatDate(meta.createdAt) : "\u2014";
   const desc = meta?.description ?? "";
   const parts = [fit(name, cols.nameW), fit(table, cols.tableW)];
   if (cols.subChipsW > 0) {
-    const sc = chips.filter((c) => c.chip_id !== c.sub_chip_id).length;
+    const sc = chips.filter((c) => c.chipId !== c.subChipId).length;
     parts.push(fit(sc > 0 ? `${sc} subs` : "\u2014", cols.subChipsW));
   }
   if (cols.partitionW > 0) {
@@ -177,13 +177,13 @@ export function chipDisplayConfig(
 
   const metaMap = new Map<string, ChipMetadata>();
   for (const m of metadata) {
-    metaMap.set(m.chip_id, m);
+    metaMap.set(m.chipId, m);
   }
 
   const index = buildChipIndex(allChips, allTags);
 
   const mainChipIds = [...new Set(
-    allChips.filter((c) => c.chip_id === c.sub_chip_id).map((c) => c.chip_id),
+    allChips.filter((c) => c.chipId === c.subChipId).map((c) => c.chipId),
   )];
 
   const cols = chipColumns({

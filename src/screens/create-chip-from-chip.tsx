@@ -38,7 +38,7 @@ export function CreateChipFromChipScreen({
   const { columns: termCols } = useTerminalSize();
   const client = useClient();
   const { data: chipsData, loading: chipsLoading, error: chipsError, refetch } =
-    useAsync(() => client.listChips(), []);
+    useAsync(() => client.chips.list(), []);
 
   const initialIds = defaultChipIds && defaultChipIds.length > 0 ? defaultChipIds : [];
   const [step, setStep] = useState<Step>(initialIds.length > 0 ? "query" : "select-chips");
@@ -75,7 +75,7 @@ export function CreateChipFromChipScreen({
     try {
       const name = chipName || getDefaultChipName();
       const tags = buildTags();
-      const id = await client.createChipFromChip(
+      const id = await client.chips.createFromChip(
         selectedChipIds,
         query || undefined,
         tableName || undefined,
@@ -83,7 +83,7 @@ export function CreateChipFromChipScreen({
       );
       // Apply tags after chip creation
       if (tags && id) {
-        await client.addChipTags(id, tags);
+        await client.chips.addTags(id, tags);
       }
       setChipId(id);
       setStep("done");
