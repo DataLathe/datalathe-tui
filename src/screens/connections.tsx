@@ -70,7 +70,7 @@ export function ConnectionsScreen({ onBack, onInputActive, isFocused = true, onC
     setLoading(true);
     setError(null);
     try {
-      const conns = await client.listConnections();
+      const conns = await client.connections.list();
       setConnections(conns);
     } catch (e) {
       setError(extractErrorMessage(e) || "Failed to load connections");
@@ -95,7 +95,7 @@ export function ConnectionsScreen({ onBack, onInputActive, isFocused = true, onC
     setStep("saving");
     setError(null);
     try {
-      await client.upsertConnection(alias, { host, port, database, user, password: pw ?? password });
+      await client.connections.upsert(alias, { host, port, database, user, password: pw ?? password });
       setMessage(`Connection '${alias}' saved`);
       resetForm();
       await loadConnections();
@@ -112,7 +112,7 @@ export function ConnectionsScreen({ onBack, onInputActive, isFocused = true, onC
     setError(null);
     setMessage(null);
     try {
-      const result = await client.testConnection(a);
+      const result = await client.connections.test(a);
       setMessage(`Connection '${a}': ${result.status}`);
     } catch (e) {
       setError(extractErrorMessage(e) || "Test failed");
@@ -123,7 +123,7 @@ export function ConnectionsScreen({ onBack, onInputActive, isFocused = true, onC
   const handleDelete = async (a: string) => {
     setStep("deleting");
     try {
-      await client.deleteConnection(a);
+      await client.connections.delete(a);
       setMessage(`Connection '${a}' deleted`);
       await loadConnections();
       onConnectionsChanged?.();

@@ -102,10 +102,10 @@ export function CreateChipScreen({
 
   const buildPartition = (): Partition | undefined => {
     if (!partitionBy) return undefined;
-    const p: Partition = { partition_by: partitionBy };
-    if (partitionQuery) p.partition_query = partitionQuery;
+    const p: Partition = { partitionBy: partitionBy };
+    if (partitionQuery) p.partitionQuery = partitionQuery;
     if (partitionValues) {
-      p.partition_values = partitionValues.split(",").map((v) => v.trim()).filter(Boolean);
+      p.partitionValues = partitionValues.split(",").map((v) => v.trim()).filter(Boolean);
     }
     return p;
   };
@@ -114,10 +114,10 @@ export function CreateChipScreen({
     if (!storageBucket && !storagePrefix && !storageTtl) return undefined;
     const config: S3StorageConfig = {};
     if (storageBucket) config.bucket = storageBucket;
-    if (storagePrefix) config.key_prefix = storagePrefix;
+    if (storagePrefix) config.keyPrefix = storagePrefix;
     if (storageTtl) {
       const days = parseInt(storageTtl, 10);
-      if (!isNaN(days) && days > 0) config.ttl_days = days;
+      if (!isNaN(days) && days > 0) config.ttlDays = days;
     }
     return Object.keys(config).length > 0 ? config : undefined;
   };
@@ -160,15 +160,15 @@ export function CreateChipScreen({
       let id: string;
       const name = chipName || getDefaultChipName();
       if (sourceType === "file") {
-        id = await client.createChipFromFile(filePath, undefined, partition, name, columnReplace, storageConfig);
+        id = await client.chips.createFromFile(filePath, undefined, partition, name, columnReplace, storageConfig);
       } else if (sourceType === "s3") {
-        id = await client.createChipFromS3(s3Path, undefined, name, columnReplace, storageConfig);
+        id = await client.chips.createFromS3(s3Path, undefined, name, columnReplace, storageConfig);
       } else {
-        id = await client.createChip(source, query, tableName, partition, name, columnReplace, storageConfig);
+        id = await client.chips.create(source, query, tableName, partition, name, columnReplace, storageConfig);
       }
       // Apply tags after chip creation
       if (tags && id) {
-        await client.addChipTags(id, tags);
+        await client.chips.addTags(id, tags);
       }
       setChipId(id);
       setStep("done");
@@ -657,8 +657,8 @@ function DatabaseSelect({ onSelect, isFocused = true }: { onSelect: (db: string)
   }
 
   const options = databases.map((db: DuckDBDatabase) => ({
-    label: db.database_name,
-    value: db.database_name,
+    label: db.databaseName,
+    value: db.databaseName,
   }));
 
   return (
