@@ -26,7 +26,7 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
   const { columns: termCols, rows: termRows } = useTerminalSize();
   const client = useClient();
   const { data: chipsData, loading: chipsLoading, error: chipsError, refetch } =
-    useAsync(() => client.listChips(), []);
+    useAsync(() => client.chips.list(), []);
 
   const initialIds = defaultChipIds && defaultChipIds.length > 0 ? defaultChipIds : [];
   const [step, setStep] = useState<Step>(initialIds.length > 0 ? "transform-option" : "select-chips");
@@ -69,7 +69,7 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
     const query = hasLimit ? rawQuery : `${rawQuery.replace(/;\s*$/, "")} LIMIT ${DEFAULT_LIMIT}`;
 
     try {
-      const report = await client.generateReport(
+      const report = await client.queries.generateReport(
         selectedChipIds,
         [query],
         undefined,
@@ -91,8 +91,8 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
         return;
       }
 
-      if (entry.transformed_query) {
-        setTransformedQuery(entry.transformed_query);
+      if (entry.transformedQuery) {
+        setTransformedQuery(entry.transformedQuery);
       }
 
       const rs = new DatalatheResultSet(entry);
@@ -235,13 +235,13 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
           {selectedChipIds.map((id) => {
             const meta = sqlMetaMap.get(id);
             const chips = sqlIndex.chipsByChipId.get(id) ?? [];
-            const tables = [...new Set(chips.map((c) => c.table_name))];
+            const tables = [...new Set(chips.map((c) => c.tableName))];
             const name = meta?.name ?? id.slice(0, 12);
             return (
               <Text key={id} color={brand.muted}>
                 {"  "}{name}
                 <Text color={brand.violet}>{" [" + tables.join(", ") + "]"}</Text>
-                {meta && <Text color={brand.muted} dimColor>{" " + formatDate(meta.created_at)}</Text>}
+                {meta && <Text color={brand.muted} dimColor>{" " + formatDate(meta.createdAt)}</Text>}
               </Text>
             );
           })}
@@ -295,7 +295,7 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
             {resultSchema.map((field, i) => (
               <Text key={i}>
                 <Text color={brand.text}>{field.name}</Text>
-                <Text color={brand.muted}>{" — "}{field.data_type}</Text>
+                <Text color={brand.muted}>{" — "}{field.dataType}</Text>
               </Text>
             ))}
           </Box>
@@ -303,9 +303,9 @@ export function QueryScreen({ defaultChipIds, onBack, onInputActive, isFocused }
             <>
               <Text color={brand.cyan} bold>Timing</Text>
               <Box flexDirection="column">
-                <Text color={brand.muted}>  Total: {timing.total_ms}ms</Text>
-                <Text color={brand.muted}>  Chip attach: {timing.chip_attach_ms}ms</Text>
-                <Text color={brand.muted}>  Query execution: {timing.query_execution_ms}ms</Text>
+                <Text color={brand.muted}>  Total: {timing.totalMs}ms</Text>
+                <Text color={brand.muted}>  Chip attach: {timing.chipAttachMs}ms</Text>
+                <Text color={brand.muted}>  Query execution: {timing.queryExecutionMs}ms</Text>
               </Box>
             </>
           )}

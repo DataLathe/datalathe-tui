@@ -20,7 +20,7 @@ interface DatabaseTablesScreenProps {
 function groupByTable(tables: DatabaseTable[]) {
   const grouped = new Map<string, DatabaseTable[]>();
   for (const row of tables) {
-    const key = `${row.schema_name}.${row.table_name}`;
+    const key = `${row.schemaName}.${row.tableName}`;
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(row);
   }
@@ -77,10 +77,10 @@ export function DatabaseTablesScreen({
   if (selectedTable && tables.has(selectedTable)) {
     const columns = tables.get(selectedTable)!;
     const tableData = columns.map((col) => ({
-      column: col.column_name,
-      type: col.data_type,
-      nullable: col.is_nullable,
-      default: col.column_default ?? "",
+      column: col.columnName,
+      type: col.dataType,
+      nullable: col.isNullable,
+      default: col.columnDefault ?? "",
     }));
 
     return (

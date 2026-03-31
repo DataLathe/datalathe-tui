@@ -30,7 +30,7 @@ export function DeleteChipScreen({
 }: DeleteChipScreenProps) {
   const client = useClient();
   const { data, loading, error, refetch } = useAsync(
-    () => client.listChips(),
+    () => client.chips.list(),
     [],
   );
 
@@ -42,7 +42,7 @@ export function DeleteChipScreen({
     if (phase === "confirm") {
       if (_input === "y") {
         setPhase("deleting");
-        client.deleteChip(selectedChipId!).then(() => {
+        client.chips.delete(selectedChipId!).then(() => {
           setPhase("done");
         }).catch((err: unknown) => {
           setPhase("error");
@@ -87,7 +87,7 @@ export function DeleteChipScreen({
 
   const selectedMeta = selectedChipId ? metaMap.get(selectedChipId) : null;
   const selectedSubChipCount = selectedChipId
-    ? allChips.filter((c: Chip) => c.chip_id === selectedChipId && c.chip_id !== c.sub_chip_id).length
+    ? allChips.filter((c: Chip) => c.chipId === selectedChipId && c.chipId !== c.subChipId).length
     : 0;
 
   return (

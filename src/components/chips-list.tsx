@@ -41,10 +41,10 @@ export function ChipsList({
 
   const loadChips = () => {
     setLoading(true);
-    client.listChips().then((data) => {
+    client.chips.list().then((data) => {
       const metaMap = new Map<string, ChipMetadata>();
       for (const m of data.metadata) {
-        metaMap.set(m.chip_id, m);
+        metaMap.set(m.chipId, m);
       }
 
       const allTags = data.tags ?? [];
@@ -52,20 +52,20 @@ export function ChipsList({
 
       // Only show main chips (chip_id === sub_chip_id)
       const mainChips = data.chips.filter(
-        (c: Chip) => c.chip_id === c.sub_chip_id,
+        (c: Chip) => c.chipId === c.subChipId,
       );
-      const uniqueIds = [...new Set(mainChips.map((c: Chip) => c.chip_id))];
+      const uniqueIds = [...new Set(mainChips.map((c: Chip) => c.chipId))];
       setChips(uniqueIds.map((id) => {
         const meta = metaMap.get(id);
         const chips = index.chipsByChipId.get(id) ?? [];
-        const tables = [...new Set(chips.map((c: Chip) => c.table_name))];
+        const tables = [...new Set(chips.map((c: Chip) => c.tableName))];
         const ps = partitionSummary(id, index);
         const ts = tagSummary(id, index);
         return {
           chipId: id,
           name: meta?.name ?? id.slice(0, 12),
           table: tables.join(", ") || "\u2014",
-          created: meta ? formatDate(meta.created_at) : "\u2014",
+          created: meta ? formatDate(meta.createdAt) : "\u2014",
           subChipCount: subChipCount(id, index),
           partitionLabel: ps !== "\u2014" ? ps : null,
           tagLabel: ts !== "\u2014" ? ts : null,
