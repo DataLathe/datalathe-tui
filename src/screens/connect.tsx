@@ -3,6 +3,7 @@ import { Box, Text, useInput } from "ink";
 import { TextInput, Spinner } from "@inkjs/ui";
 import { DatalatheClient } from "@datalathe/client";
 import { AsciiLogo } from "../components/ascii-logo.js";
+import { saveLastUrl } from "../cli.js";
 import { brand } from "../theme.js";
 import { currentVersion } from "../utils/check-update.js";
 import { useUpdateCheck } from "../hooks/use-update-check.js";
@@ -39,6 +40,7 @@ export function ConnectScreen({ initialUrl, onConnect, onDownload }: ConnectScre
     try {
       const client = new DatalatheClient(url, { timeout: CLIENT_TIMEOUT_MS });
       await client.getDatabases();
+      saveLastUrl(url);
       onConnect(client, url);
     } catch (err) {
       setError(
