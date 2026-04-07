@@ -18,6 +18,7 @@ import { DeleteChipScreen } from "./screens/delete-chip.js";
 import { ExtractTablesScreen } from "./screens/extract-tables.js";
 import { ConnectionsScreen } from "./screens/connections.js";
 import { DownloadBinariesScreen } from "./screens/download-binaries.js";
+import { ListChipsScreen } from "./screens/list-chips.js";
 import { brand } from "./theme.js";
 
 const SCREEN_TITLES: Record<string, string> = {
@@ -27,6 +28,7 @@ const SCREEN_TITLES: Record<string, string> = {
   "create-chip": "Create Chip",
   "create-chip-from-chip": "Create Chip from Chip",
   "chip-detail": "Chip Detail",
+  "list-chips": "List Chips",
   query: "Query Chips",
   "delete-chip": "Delete Chip",
   "extract-tables": "Extract Tables",
@@ -152,6 +154,16 @@ export function App({ url }: AppProps) {
             onCreateFromChip={(chipIds) => navigate("create-chip-from-chip", { sourceChipIds: chipIds })}
             onBack={goBack}
             onDeleted={handleChipDeleted}
+            isFocused={mainFocused}
+          />
+        );
+      case "list-chips":
+        return (
+          <ListChipsScreen
+            onSelectChip={(chipId) => navigate("chip-detail", { chipId })}
+            onQuery={(chipIds) => navigate("query", { queryChipIds: chipIds })}
+            onCreateFromChip={(chipIds) => navigate("create-chip-from-chip", { sourceChipIds: chipIds })}
+            onBack={goBack}
             isFocused={mainFocused}
           />
         );

@@ -7,6 +7,7 @@ export type Screen =
   | "create-chip"
   | "create-chip-from-chip"
   | "chip-detail"
+  | "list-chips"
   | "query"
   | "delete-chip"
   | "extract-tables"
