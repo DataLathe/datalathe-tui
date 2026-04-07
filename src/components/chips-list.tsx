@@ -179,7 +179,7 @@ export function ChipsList({
       })}
       {(canScrollUp || canScrollDown) && (
         <Text color={brand.muted}>
-          {" "}{canScrollUp ? "\u2191" : " "} {scrollOffset + 1}\u2013{Math.min(scrollOffset + maxVisible, chips.length)}/{chips.length} {canScrollDown ? "\u2193" : " "}
+          {" "}{canScrollUp ? "\u2191" : " "} {scrollOffset + 1}-{Math.min(scrollOffset + maxVisible, chips.length)}/{chips.length} {canScrollDown ? "\u2193" : " "}
         </Text>
       )}
     </Box>

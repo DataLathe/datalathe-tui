@@ -11,6 +11,11 @@ interface HomeScreenProps {
 
 const menuItems = [
   {
+    label: "List Chips",
+    value: "list-chips" as Screen,
+    description: "Browse chips and inspect metadata, queries, and tags",
+  },
+  {
     label: "Create Chip",
     value: "create-chip" as Screen,
     description: "Stage data from a source into a new chip",
