@@ -83,10 +83,11 @@ export function ChipDetailScreen({
   const meta = (data?.metadata ?? []).find((m) => m.chipId === chipId);
   const chipTags = (data?.tags ?? []).filter((t: ChipTag) => t.chipId === chipId);
 
-  // Main chip: where chip_id === sub_chip_id
-  const mainChip = allChips.find(
-    (c: Chip) => c.chipId === chipId && c.chipId === c.subChipId,
-  );
+  // Any row matching this chipId carries the parent's tableName and
+  // other shared fields. Post-v1.4.6 chip-manager does not store a
+  // self-entry row where chipId === subChipId, so fall back to the
+  // first sub_chip row.
+  const mainChip = allChips.find((c: Chip) => c.chipId === chipId);
 
   // Other checked chips for context
   const otherChecked = checkedChipIds.filter((id) => id !== chipId);
