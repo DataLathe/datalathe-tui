@@ -50,11 +50,10 @@ export function ChipsList({
       const allTags = data.tags ?? [];
       const index = buildChipIndex(data.chips, allTags);
 
-      // Only show main chips (chip_id === sub_chip_id)
-      const mainChips = data.chips.filter(
-        (c: Chip) => c.chipId === c.subChipId,
-      );
-      const uniqueIds = [...new Set(mainChips.map((c: Chip) => c.chipId))];
+      // Extract unique parent chipIds. Post-v1.4.6 chip-manager does not
+      // store a parent self-entry row where chipId === subChipId; all
+      // rows are sub_chip rows sharing the parent chipId.
+      const uniqueIds = [...new Set(data.chips.map((c: Chip) => c.chipId))];
       setChips(uniqueIds.map((id) => {
         const meta = metaMap.get(id);
         const chips = index.chipsByChipId.get(id) ?? [];
