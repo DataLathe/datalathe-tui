@@ -182,9 +182,10 @@ export function chipDisplayConfig(
 
   const index = buildChipIndex(allChips, allTags);
 
-  const mainChipIds = [...new Set(
-    allChips.filter((c) => c.chipId === c.subChipId).map((c) => c.chipId),
-  )];
+  // Post-v1.4.6 chip-manager no longer stores a parent self-entry row
+  // where chipId === subChipId; all rows are sub_chip rows sharing a
+  // parent chipId. Extract unique parent chipIds from all rows.
+  const mainChipIds = [...new Set(allChips.map((c) => c.chipId))];
 
   const cols = chipColumns({
     availableWidth: panelWidth,

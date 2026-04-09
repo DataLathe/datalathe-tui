@@ -52,12 +52,12 @@ export function ListChipsScreen({
 
     const idx = buildChipIndex(allChips, allTags);
 
+    // Get unique parent chip_ids from all sub_chip rows. Post-v1.4.6
+    // there is no parent self-entry row where chip_id === subChipId;
+    // chip-manager only stores sub_chip rows, each with a distinct
+    // subChipId but sharing the parent chipId.
     const mainChipIds = [
-      ...new Set(
-        allChips
-          .filter((c: Chip) => c.chipId === c.subChipId)
-          .map((c: Chip) => c.chipId),
-      ),
+      ...new Set(allChips.map((c: Chip) => c.chipId)),
     ];
 
     return { mainChipIds, metaMap, index: idx };
