@@ -38,7 +38,11 @@ export function ConnectScreen({ initialUrl, onConnect, onDownload }: ConnectScre
     setError(null);
 
     try {
-      const client = new DatalatheClient(url, { timeout: CLIENT_TIMEOUT_MS });
+      const devKey = process.env.DATALATHE_DEV_KEY;
+      const client = new DatalatheClient(url, {
+        timeout: CLIENT_TIMEOUT_MS,
+        ...(devKey ? { headers: { "x-datalathe-dev-key": devKey } } : {}),
+      });
       await client.getDatabases();
       saveLastUrl(url);
       onConnect(client, url);
