@@ -34,7 +34,7 @@ export function ChipDetailScreen({
 }: ChipDetailScreenProps) {
   const client = useClient();
   const { data, loading, error, refetch } = useAsync(
-    () => client.chips.list(),
+    () => client.chips.get(chipId),
     [chipId],
   );
 
