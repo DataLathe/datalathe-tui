@@ -22,6 +22,8 @@ type Step =
   | "partition-query"
   | "partition-values"
   | "column-replace"
+  | "streaming"
+  | "streaming-column"
   | "storage-config"
   | "storage-bucket"
   | "storage-prefix"
@@ -42,6 +44,7 @@ const INPUT_ACTIVE_STEPS: Step[] = [
   "partition-query",
   "partition-values",
   "column-replace",
+  "streaming-column",
   "storage-bucket",
   "storage-prefix",
   "storage-ttl",
@@ -85,7 +88,11 @@ export function CreateChipScreen({
   const [storageBucket, setStorageBucket] = useState("");
   const [storagePrefix, setStoragePrefix] = useState("");
   const [storageTtl, setStorageTtl] = useState("");
+  const [streaming, setStreaming] = useState(false);
+  const [streamingColumn, setStreamingColumn] = useState("");
   const [chipId, setChipId] = useState<string | null>(null);
+  const [totalRows, setTotalRows] = useState<number | undefined>(undefined);
+  const [elapsedMs, setElapsedMs] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
   const getDefaultChipName = (): string => {
@@ -164,7 +171,8 @@ export function CreateChipScreen({
       } else if (sourceType === "s3") {
         id = await client.chips.createFromS3(s3Path, undefined, name, columnReplace, storageConfig);
       } else {
-        id = await client.chips.create(source, query, tableName, partition, name, columnReplace, storageConfig);
+        const col = streamingColumn.trim() || undefined;
+        id = await client.chips.create(source, query, tableName, partition, name, columnReplace, storageConfig, streaming || undefined, col);
       }
       // Apply tags after chip creation
       if (tags && id) {
@@ -412,6 +420,43 @@ export function CreateChipScreen({
               placeholder="optional"
               onSubmit={(v) => {
                 if (v.trim()) setColumnReplaceInput(v.trim());
+                setStep(sourceType === "database" ? "streaming" : "storage-config");
+              }}
+            />
+          </Box>
+        </Box>
+      )}
+
+      {step === "streaming" && (
+        <Box flexDirection="column" gap={1}>
+          <Text color={brand.text}>Use streaming ingest?</Text>
+          <Text color={brand.muted}>Recommended for tables with more than 10M rows.</Text>
+          <MenuSelect
+            isDisabled={!isFocused}
+            options={[
+              { label: "No", value: "no", description: "Standard ingest" },
+              { label: "Yes", value: "yes", description: "Streaming ingest" },
+            ]}
+            onChange={(value) => {
+              const enabled = value === "yes";
+              setStreaming(enabled);
+              setStreamingColumn("");
+              setStep(enabled ? "streaming-column" : "storage-config");
+            }}
+          />
+        </Box>
+      )}
+
+      {step === "streaming-column" && (
+        <Box flexDirection="column" gap={1}>
+          <Text color={brand.text}>Partition column (Enter to skip):</Text>
+          <Text color={brand.muted}>Numeric primary-key column for parallel chunked load.</Text>
+          <Box>
+            <Text color={brand.violet}>{"❯ "}</Text>
+            <TextInput
+              placeholder="optional"
+              onSubmit={(v) => {
+                if (v.trim()) setStreamingColumn(v.trim());
                 setStep("storage-config");
               }}
             />
@@ -523,6 +568,16 @@ export function CreateChipScreen({
                   <Text color={brand.muted}>Query       </Text>
                   <Text color={brand.text}>{query}</Text>
                 </Text>
+                <Text>
+                  <Text color={brand.muted}>Streaming   </Text>
+                  <Text color={brand.text}>{streaming ? "Yes" : "No"}</Text>
+                </Text>
+                {streaming && (
+                  <Text>
+                    <Text color={brand.muted}>Part. Col   </Text>
+                    <Text color={brand.text}>{streamingColumn || "None"}</Text>
+                  </Text>
+                )}
               </>
             )}
             {partitionBy ? (
@@ -632,6 +687,16 @@ export function CreateChipScreen({
           <Text color={brand.text}>
             Chip ID: <Text color={brand.cyan}>{chipId}</Text>
           </Text>
+          {totalRows !== undefined && (
+            <Text color={brand.text}>
+              Rows: <Text color={brand.cyan}>{totalRows.toLocaleString()}</Text>
+            </Text>
+          )}
+          {elapsedMs !== undefined && (
+            <Text color={brand.text}>
+              Time: <Text color={brand.cyan}>{elapsedMs}ms</Text>
+            </Text>
+          )}
           <Text color={brand.muted}>
             Press b to go back.
           </Text>
