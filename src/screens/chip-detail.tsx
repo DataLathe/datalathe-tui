@@ -4,6 +4,8 @@ import { Spinner } from "@inkjs/ui";
 import type { Chip, ChipTag } from "@datalathe/client";
 import { useClient } from "../hooks/use-client.js";
 import { useAsync } from "../hooks/use-async.js";
+import { useTerminalSize } from "../hooks/use-terminal-size.js";
+import { scrollWindow } from "../utils/chip-options.js";
 import { ErrorDisplay } from "../components/error-display.js";
 import { brand } from "../theme.js";
 
@@ -39,6 +41,20 @@ export function ChipDetailScreen({
   );
 
   const [deleteState, setDeleteState] = useState<DeleteState>({ phase: "idle" });
+  const [scrollOffset, setScrollOffset] = useState(0);
+  const { rows } = useTerminalSize();
+
+  const meta = (data?.metadata ?? []).find((m) => m.chipId === chipId);
+  const chipTags = (data?.tags ?? []).filter((t: ChipTag) => t.chipId === chipId);
+  const subChips = (data?.chips ?? []).filter((c: Chip) => c.chipId === chipId);
+  const otherChecked = checkedChipIds.filter((id) => id !== chipId);
+
+  const reserved =
+    14 +
+    (meta?.query ? 1 : 0) +
+    (meta?.partitionColumn ? 1 : 0) +
+    (chipTags.length > 0 ? chipTags.length + 1 : 0);
+  const maxVisible = Math.max(3, rows - reserved);
 
   useInput((input, key) => {
     if (deleteState.phase === "deleting") return;
@@ -60,7 +76,13 @@ export function ChipDetailScreen({
       return;
     }
 
-    if (input === "s") {
+    if (key.upArrow) {
+      setScrollOffset((o) => Math.max(0, o - 1));
+    } else if (key.downArrow) {
+      setScrollOffset((o) =>
+        Math.min(Math.max(0, subChips.length - maxVisible), o + 1),
+      );
+    } else if (input === "s") {
       const ids = [...new Set([chipId, ...checkedChipIds])];
       onQuery(ids);
     } else if (input === "c") {
@@ -79,18 +101,20 @@ export function ChipDetailScreen({
     return <ErrorDisplay message={error} onRetry={refetch} onBack={onBack} />;
   }
 
-  const allChips = data?.chips ?? [];
-  const meta = (data?.metadata ?? []).find((m) => m.chipId === chipId);
-  const chipTags = (data?.tags ?? []).filter((t: ChipTag) => t.chipId === chipId);
-
-  // Any row matching this chipId carries the parent's tableName and
-  // other shared fields. Post-v1.4.6 chip-manager does not store a
-  // self-entry row where chipId === subChipId, so fall back to the
-  // first sub_chip row.
-  const mainChip = allChips.find((c: Chip) => c.chipId === chipId);
-
-  // Other checked chips for context
-  const otherChecked = checkedChipIds.filter((id) => id !== chipId);
+  const { start, end, indicator } = scrollWindow(
+    subChips.length,
+    maxVisible,
+    scrollOffset,
+  );
+  const tables = [...new Set(subChips.map((c: Chip) => c.tableName))];
+  const subChipLabel = (c: Chip) =>
+    meta?.partitionColumn
+      ? `${meta.partitionColumn} = ${c.partitionValue || "—"}`
+      : c.partitionValue || "";
+  const labelWidth = subChips.reduce(
+    (w, c) => Math.max(w, subChipLabel(c).length),
+    0,
+  );
 
   return (
     <Box flexDirection="column" gap={1} paddingY={1}>
@@ -123,27 +147,39 @@ export function ChipDetailScreen({
         </Box>
       )}
 
-      {mainChip && (
+      {subChips.length > 0 && (
         <Box flexDirection="column">
-          <Text color={brand.cyan} bold>
-            Main Chip
-          </Text>
+          <Box>
+            <Text color={brand.cyan} bold>
+              Sub-chips ({subChips.length})
+            </Text>
+            {indicator && (
+              <Text color={brand.muted}>   {indicator}</Text>
+            )}
+          </Box>
           <Text>
             <Text color={brand.muted}>Table: </Text>
-            <Text color={brand.violet}>{mainChip.tableName}</Text>
+            <Text color={brand.violet}>{tables.join(", ") || "—"}</Text>
           </Text>
-          <Text>
-            <Text color={brand.muted}>Partition: </Text>
-            <Text color={brand.text}>{mainChip.partitionValue || "—"}</Text>
-          </Text>
-          {mainChip.createdAt && (
+          {meta?.partitionColumn && (
             <Text>
-              <Text color={brand.muted}>Created: </Text>
-              <Text color={brand.text}>
-                {new Date(mainChip.createdAt * 1000).toLocaleString()}
-              </Text>
+              <Text color={brand.muted}>Partitioned by: </Text>
+              <Text color={brand.text}>{meta.partitionColumn}</Text>
             </Text>
           )}
+          <Box flexDirection="column" marginTop={1}>
+            {subChips.slice(start, end).map((c: Chip) => (
+              <Text key={c.subChipId}>
+                <Text color={brand.text}>
+                  {"  " + subChipLabel(c).padEnd(labelWidth)}
+                </Text>
+                <Text color={brand.muted}>  sub: </Text>
+                <Text color={brand.muted} dimColor>
+                  {c.subChipId.slice(0, 8)}
+                </Text>
+              </Text>
+            ))}
+          </Box>
         </Box>
       )}
 
@@ -182,6 +218,7 @@ export function ChipDetailScreen({
       )}
 
       <Box gap={2}>
+        {indicator && <Text color={brand.muted}>↑↓:scroll</Text>}
         <Text color={brand.muted}>s:query {otherChecked.length > 0 ? `(${1 + otherChecked.length} chips)` : "this chip"}</Text>
         <Text color={brand.muted}>c:create from chip</Text>
         <Text color={brand.muted}>d:delete</Text>
