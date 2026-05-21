@@ -19,6 +19,33 @@ export function fit(str: string, width: number): string {
   return str.padEnd(width);
 }
 
+export interface ScrollWindow {
+  start: number;
+  end: number;
+  indicator: string;
+}
+
+/**
+ * Compute the visible slice of a scrollable list. `indicator` is empty when the
+ * list fits within `maxVisible`; otherwise it reads "\u2191 start-end/total \u2193" with
+ * each arrow blanked when there is nothing further in that direction.
+ */
+export function scrollWindow(
+  total: number,
+  maxVisible: number,
+  offset: number,
+): ScrollWindow {
+  const size = Math.max(1, maxVisible);
+  if (total <= size) {
+    return { start: 0, end: total, indicator: "" };
+  }
+  const start = Math.min(Math.max(0, offset), total - size);
+  const end = start + size;
+  const up = start > 0 ? "\u2191" : " ";
+  const down = end < total ? "\u2193" : " ";
+  return { start, end, indicator: `${up} ${start + 1}-${end}/${total} ${down}` };
+}
+
 export interface ChipColumnWidths {
   nameW: number;
   tableW: number;
