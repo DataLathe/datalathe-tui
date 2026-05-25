@@ -449,7 +449,7 @@ export function CreateChipScreen({
 
       {step === "streaming-column" && (
         <Box flexDirection="column" gap={1}>
-          <Text color={brand.text}>Partition column (Enter to skip):</Text>
+          <Text color={brand.text}>Keyset column (Enter to skip):</Text>
           <Text color={brand.muted}>Numeric primary-key column for parallel chunked load.</Text>
           <Box>
             <Text color={brand.violet}>{"❯ "}</Text>
