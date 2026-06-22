@@ -1,7 +1,8 @@
 import https from "node:https";
+import { getHttpsAgent } from "./https-agent.js";
+import { describeTlsError } from "./tls-error.js";
 
 const LICENSE_API_HOST = "license.datalathe.com";
-const agent = new https.Agent({ rejectUnauthorized: false });
 
 export interface VersionsResponse {
   versions: string[];
@@ -16,19 +17,30 @@ export interface DownloadUrlsResponse {
   expiresIn: number;
 }
 
-function httpsPost(path: string, body: Record<string, unknown>): Promise<{ status: number; data: Record<string, unknown> }> {
+export interface PostTarget {
+  host: string;
+  port?: number;
+  agent?: https.Agent;
+}
+
+export function postJson(
+  target: PostTarget,
+  path: string,
+  body: Record<string, unknown>
+): Promise<{ status: number; data: Record<string, unknown> }> {
   return new Promise((resolve, reject) => {
     const payload = JSON.stringify(body);
     const req = https.request(
       {
-        hostname: LICENSE_API_HOST,
+        hostname: target.host,
+        port: target.port,
         path,
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Content-Length": Buffer.byteLength(payload),
         },
-        agent,
+        agent: target.agent ?? getHttpsAgent(),
       },
       (res) => {
         const chunks: Buffer[] = [];
@@ -49,9 +61,10 @@ function httpsPost(path: string, body: Record<string, unknown>): Promise<{ statu
 
     req.on("error", (err) => {
       reject(
-        new Error(
-          `Could not reach license server (${err.message}). Check your network connection.`
-        )
+        describeTlsError(err, target.host) ??
+          new Error(
+            `Could not reach license server (${err.message}). Check your network connection.`
+          )
       );
     });
 
@@ -63,7 +76,7 @@ function httpsPost(path: string, body: Record<string, unknown>): Promise<{ statu
 export async function fetchVersions(
   licenseKey: string
 ): Promise<VersionsResponse> {
-  const { status, data } = await httpsPost("/downloads/versions", {
+  const { status, data } = await postJson({ host: LICENSE_API_HOST }, "/downloads/versions", {
     licenseKey,
   });
 
@@ -83,7 +96,7 @@ export async function fetchDownloadUrls(
   version: string,
   platform: string
 ): Promise<DownloadUrlsResponse> {
-  const { status, data } = await httpsPost("/downloads/urls", {
+  const { status, data } = await postJson({ host: LICENSE_API_HOST }, "/downloads/urls", {
     licenseKey,
     version,
     platform,
@@ -91,8 +104,7 @@ export async function fetchDownloadUrls(
 
   if (status >= 400) {
     throw new Error(
-      (data.error as string) ||
-        `Failed to get download URLs (${status})`
+      (data.error as string) || `Failed to get download URLs (${status})`
     );
   }
 
