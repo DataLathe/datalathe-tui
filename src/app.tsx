@@ -44,6 +44,7 @@ export function App({ url }: AppProps) {
   const { exit } = useApp();
   const [client, setClient] = useState<DatalatheClient | null>(null);
   const [connectedUrl, setConnectedUrl] = useState<string | null>(null);
+  const [engineVersion, setEngineVersion] = useState<string | null>(null);
   const [inputActive, setInputActive] = useState(false);
   const [preConnectScreen, setPreConnectScreen] = useState<"connect" | "download">("connect");
   const [checkedChipIds, setCheckedChipIds] = useState<string[]>([]);
@@ -59,6 +60,11 @@ export function App({ url }: AppProps) {
       setClient(newClient);
       setConnectedUrl(connUrl);
       setInputActive(false);
+      setEngineVersion(null);
+      newClient
+        .getVersion()
+        .then((v) => setEngineVersion(v.version))
+        .catch(() => setEngineVersion(null));
       navigate("home");
     },
     [navigate],
@@ -272,7 +278,10 @@ export function App({ url }: AppProps) {
         <Box width={columns} justifyContent="space-between" paddingX={1}>
           <LogoWordmark />
           <Text color={brand.muted}>{screenTitle}</Text>
-          <Text color={brand.muted}>{connectedUrl}</Text>
+          <Text color={brand.muted}>
+            {connectedUrl}
+            {engineVersion ? ` · engine v${engineVersion}` : ""}
+          </Text>
         </Box>
 
         {/* Main content area */}
@@ -313,6 +322,7 @@ export function App({ url }: AppProps) {
         <Box width={columns} justifyContent="space-between" paddingX={1}>
           <Text color={brand.muted}>
             <Text color={brand.cyan}>●</Text> {connectedUrl}
+            {engineVersion ? ` · engine v${engineVersion}` : ""}
           </Text>
           <Text color={brand.muted} dimColor>
             Tab:panels  q:quit  b:back
