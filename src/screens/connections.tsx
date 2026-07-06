@@ -30,11 +30,13 @@ type Step =
   | "add-database"
   | "add-user"
   | "add-password"
+  | "reattach-password"
   | "saving"
   | "testing"
+  | "attaching"
   | "deleting";
 
-const INPUT_STEPS: Step[] = ["add-alias", "add-host", "add-port", "add-database", "add-user", "add-password"];
+const INPUT_STEPS: Step[] = ["add-alias", "add-host", "add-port", "add-database", "add-user", "add-password", "reattach-password"];
 
 interface ConnectionsScreenProps {
   onBack: () => void;
@@ -60,6 +62,7 @@ export function ConnectionsScreen({ onBack, onInputActive, isFocused = true, onC
   const [password, setPassword] = useState("");
 
   const [selectedAlias, setSelectedAlias] = useState<string | null>(null);
+  const [pendingReattach, setPendingReattach] = useState<ConnectionInfo | null>(null);
 
   useEffect(() => {
     onInputActive?.(INPUT_STEPS.includes(step));
@@ -120,6 +123,49 @@ export function ConnectionsScreen({ onBack, onInputActive, isFocused = true, onC
     setStep("list");
   };
 
+  const handleReattach = async (a: string) => {
+    setStep("attaching");
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await client.connections.reattach(a);
+      setMessage(`Connection '${a}': ${result.status}`);
+      await loadConnections();
+      onConnectionsChanged?.();
+      setStep("list");
+    } catch (e) {
+      // Engines without the attach endpoint 404: re-saving the connection
+      // triggers their reattach path, but needs the password again.
+      if ((e as { statusCode?: number }).statusCode === 404) {
+        const conn = connections.find((c) => c.alias === a);
+        if (conn) {
+          setPendingReattach(conn);
+          setStep("reattach-password");
+          return;
+        }
+      }
+      setError(extractErrorMessage(e) || "Re-attach failed");
+      setStep("list");
+    }
+  };
+
+  const handleReattachFallback = async (pw: string) => {
+    if (!pendingReattach) return;
+    setStep("saving");
+    setError(null);
+    try {
+      const { alias: a, host: h, port: p, database: db, user: u } = pendingReattach;
+      await client.connections.upsert(a, { host: h, port: p, database: db, user: u, password: pw });
+      setMessage(`Connection '${a}' saved — engine re-attaching`);
+      await loadConnections();
+      onConnectionsChanged?.();
+    } catch (e) {
+      setError(extractErrorMessage(e) || "Re-attach failed");
+    }
+    setPendingReattach(null);
+    setStep("list");
+  };
+
   const handleDelete = async (a: string) => {
     setStep("deleting");
     try {
@@ -149,6 +195,7 @@ export function ConnectionsScreen({ onBack, onInputActive, isFocused = true, onC
                 <Text key={c.alias}>
                   <Text color={brand.violet}>{c.alias}</Text>
                   <Text color={brand.muted}> → {c.user}@{c.host}:{c.port}/{c.database}</Text>
+                  {c.attached === false && <Text color={brand.error}> ⚠ not attached</Text>}
                 </Text>
               ))}
             </Box>
@@ -166,6 +213,7 @@ export function ConnectionsScreen({ onBack, onInputActive, isFocused = true, onC
               ...(connections.length > 0
                 ? [
                     { label: "Test Connection", value: "test", description: "Verify a connection works" },
+                    { label: "Re-attach Connection", value: "reattach", description: "Force the engine to re-attach a saved connection" },
                     { label: "Delete Connection", value: "delete", description: "Remove a saved connection" },
                   ]
                 : []),
@@ -177,7 +225,7 @@ export function ConnectionsScreen({ onBack, onInputActive, isFocused = true, onC
               if (value === "add") {
                 resetForm();
                 setStep("add-alias");
-              } else if (value === "test" || value === "delete") {
+              } else if (value === "test" || value === "delete" || value === "reattach") {
                 setSelectedAlias(null);
                 setStep("action");
                 setSelectedAlias(value);
@@ -203,6 +251,8 @@ export function ConnectionsScreen({ onBack, onInputActive, isFocused = true, onC
             onChange={(value) => {
               if (selectedAlias === "test") {
                 handleTest(value);
+              } else if (selectedAlias === "reattach") {
+                handleReattach(value);
               } else {
                 handleDelete(value);
               }
@@ -278,6 +328,22 @@ export function ConnectionsScreen({ onBack, onInputActive, isFocused = true, onC
 
       {step === "saving" && <Spinner label="Saving connection..." />}
       {step === "testing" && <Spinner label="Testing connection..." />}
+      {step === "attaching" && <Spinner label="Re-attaching connection..." />}
+
+      {step === "reattach-password" && pendingReattach && (
+        <Box flexDirection="column" gap={1}>
+          <Text color={brand.muted}>
+            {pendingReattach.alias} → {pendingReattach.user}@{pendingReattach.host}:{pendingReattach.port}/{pendingReattach.database}
+          </Text>
+          <Text color={brand.text}>
+            This engine can't re-attach from its saved config — re-enter the password to save & re-attach:
+          </Text>
+          <Box>
+            <Text color={brand.violet}>{"❯ "}</Text>
+            <TextInput placeholder="password" onSubmit={(v) => { if (v) handleReattachFallback(v); }} />
+          </Box>
+        </Box>
+      )}
       {step === "deleting" && <Spinner label="Deleting connection..." />}
     </Box>
   );
