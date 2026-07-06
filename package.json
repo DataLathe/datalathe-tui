@@ -22,7 +22,7 @@
   "dependencies": {
     "@datalathe/client": "^1.11.0",
     "@inkjs/ui": "^2.0.0",
-    "ink": "^6.0.0",
+    "ink": "^7.1.0",
     "react": "^19.0.0"
   },
   "devDependencies": {
