@@ -9,6 +9,7 @@ export type Screen =
   | "chip-detail"
   | "list-chips"
   | "query"
+  | "raw-query"
   | "delete-chip"
   | "extract-tables"
   | "connections"

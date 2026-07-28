@@ -31,6 +31,11 @@ const menuItems = [
     description: "Run SQL queries against chips",
   },
   {
+    label: "Raw SQL",
+    value: "raw-query" as Screen,
+    description: "Inspect chip contents directly, no view layer",
+  },
+  {
     label: "Extract Tables",
     value: "extract-tables" as Screen,
     description: "Parse SQL to find referenced tables",
