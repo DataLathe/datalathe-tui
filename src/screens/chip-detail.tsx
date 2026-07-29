@@ -19,6 +19,7 @@ interface ChipDetailScreenProps {
   chipId: string;
   checkedChipIds: string[];
   onQuery: (chipIds: string[]) => void;
+  onRawQuery: (chipIds: string[]) => void;
   onCreateFromChip: (chipIds: string[]) => void;
   onBack: () => void;
   onDeleted: () => void;
@@ -29,6 +30,7 @@ export function ChipDetailScreen({
   chipId,
   checkedChipIds,
   onQuery,
+  onRawQuery,
   onCreateFromChip,
   onBack,
   onDeleted,
@@ -85,6 +87,9 @@ export function ChipDetailScreen({
     } else if (input === "s") {
       const ids = [...new Set([chipId, ...checkedChipIds])];
       onQuery(ids);
+    } else if (input === "x") {
+      const ids = [...new Set([chipId, ...checkedChipIds])];
+      onRawQuery(ids);
     } else if (input === "c") {
       const ids = [...new Set([chipId, ...checkedChipIds])];
       onCreateFromChip(ids);
@@ -220,6 +225,7 @@ export function ChipDetailScreen({
       <Box gap={2}>
         {indicator && <Text color={brand.muted}>↑↓:scroll</Text>}
         <Text color={brand.muted}>s:query {otherChecked.length > 0 ? `(${1 + otherChecked.length} chips)` : "this chip"}</Text>
+        <Text color={brand.muted}>x:raw sql</Text>
         <Text color={brand.muted}>c:create from chip</Text>
         <Text color={brand.muted}>d:delete</Text>
         <Text color={brand.muted}>b:back</Text>

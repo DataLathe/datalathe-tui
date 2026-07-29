@@ -14,6 +14,7 @@ import { CreateChipScreen } from "./screens/create-chip.js";
 import { CreateChipFromChipScreen } from "./screens/create-chip-from-chip.js";
 import { ChipDetailScreen } from "./screens/chip-detail.js";
 import { QueryScreen } from "./screens/query.js";
+import { RawQueryScreen } from "./screens/raw-query.js";
 import { DeleteChipScreen } from "./screens/delete-chip.js";
 import { ExtractTablesScreen } from "./screens/extract-tables.js";
 import { ConnectionsScreen } from "./screens/connections.js";
@@ -157,6 +158,7 @@ export function App({ url }: AppProps) {
             chipId={current.params.chipId as string}
             checkedChipIds={checkedChipIds}
             onQuery={(chipIds) => navigate("query", { queryChipIds: chipIds })}
+            onRawQuery={(chipIds) => navigate("raw-query", { queryChipIds: chipIds })}
             onCreateFromChip={(chipIds) => navigate("create-chip-from-chip", { sourceChipIds: chipIds })}
             onBack={goBack}
             onDeleted={handleChipDeleted}
@@ -168,6 +170,7 @@ export function App({ url }: AppProps) {
           <ListChipsScreen
             onSelectChip={(chipId) => navigate("chip-detail", { chipId })}
             onQuery={(chipIds) => navigate("query", { queryChipIds: chipIds })}
+            onRawQuery={(chipIds) => navigate("raw-query", { queryChipIds: chipIds })}
             onCreateFromChip={(chipIds) => navigate("create-chip-from-chip", { sourceChipIds: chipIds })}
             onBack={goBack}
             isFocused={mainFocused}
@@ -188,6 +191,18 @@ export function App({ url }: AppProps) {
         return (
           <ExtractTablesScreen
             onBack={goBack}
+            onInputActive={setInputActive}
+            isFocused={mainFocused}
+          />
+        );
+      case "raw-query":
+        return (
+          <RawQueryScreen
+            defaultChipIds={
+              (current.params.queryChipIds as string[] | undefined) ??
+              (checkedChipIds.length > 0 ? checkedChipIds : undefined)
+            }
+            onBack={goHome}
             onInputActive={setInputActive}
             isFocused={mainFocused}
           />
