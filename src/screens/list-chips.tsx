@@ -19,6 +19,7 @@ import {
 interface ListChipsScreenProps {
   onSelectChip: (chipId: string) => void;
   onQuery: (chipIds: string[]) => void;
+  onRawQuery: (chipIds: string[]) => void;
   onCreateFromChip: (chipIds: string[]) => void;
   onBack: () => void;
   isFocused: boolean;
@@ -27,6 +28,7 @@ interface ListChipsScreenProps {
 export function ListChipsScreen({
   onSelectChip,
   onQuery,
+  onRawQuery,
   onCreateFromChip,
   onBack,
   isFocused,
@@ -94,6 +96,9 @@ export function ListChipsScreen({
       } else if (input === "s") {
         const chipId = mainChipIds[cursor];
         if (chipId) onQuery([chipId]);
+      } else if (input === "x") {
+        const chipId = mainChipIds[cursor];
+        if (chipId) onRawQuery([chipId]);
       } else if (input === "c") {
         const chipId = mainChipIds[cursor];
         if (chipId) onCreateFromChip([chipId]);
@@ -276,6 +281,7 @@ export function ListChipsScreen({
                 <Box marginTop={1} gap={2}>
                   <Text color={brand.muted}>v:full detail</Text>
                   <Text color={brand.muted}>s:query</Text>
+                  <Text color={brand.muted}>x:raw sql</Text>
                   <Text color={brand.muted}>c:create from chip</Text>
                 </Box>
               </Box>
@@ -299,6 +305,7 @@ export function ListChipsScreen({
         <Text color={brand.muted}>enter:expand</Text>
         <Text color={brand.muted}>v:full detail</Text>
         <Text color={brand.muted}>s:query</Text>
+        <Text color={brand.muted}>x:raw sql</Text>
         <Text color={brand.muted}>c:create from chip</Text>
         <Text color={brand.muted}>r:refresh</Text>
         <Text color={brand.muted}>b:back</Text>
