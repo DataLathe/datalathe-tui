@@ -7,8 +7,10 @@ import { useAsync } from "../hooks/use-async.js";
 import { useTerminalSize } from "../hooks/use-terminal-size.js";
 import { TableView } from "../components/table-view.js";
 import { ErrorDisplay } from "../components/error-display.js";
+import { MenuSelect } from "../components/menu-select.js";
 import { brand } from "../theme.js";
 import { formatDate, chipLabel, chipHeader, chipDisplayConfig } from "../utils/chip-options.js";
+import { buildTableRefs, appendRef } from "../utils/chip-table-refs.js";
 
 type Step = "select-chips" | "sql" | "executing" | "results";
 
@@ -37,6 +39,9 @@ export function RawQueryScreen({ defaultChipIds, onBack, onInputActive, isFocuse
   const [result, setResult] = useState<ChipQueryResult | null>(null);
   const [rows, setRows] = useState<Record<string, unknown>[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sql, setSql] = useState("");
+  const [sqlInputKey, setSqlInputKey] = useState(0);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
     onInputActive?.(step === "sql");
@@ -59,17 +64,35 @@ export function RawQueryScreen({ defaultChipIds, onBack, onInputActive, isFocuse
     }
   };
 
+  const insertTableRef = (refSql: string) => {
+    setSql((prev) => appendRef(prev, refSql));
+    setSqlInputKey((k) => k + 1);
+    setPickerOpen(false);
+  };
+
   useInput(
-    (input) => {
+    (input, key) => {
+      if (step === "sql") {
+        if (pickerOpen) {
+          if (key.escape) setPickerOpen(false);
+          return;
+        }
+        if (key.tab) setPickerOpen(true);
+        return;
+      }
       if (step !== "results") return;
       if (input === "r") {
         setResult(null);
         setRows(null);
+        setSql("");
+        setSqlInputKey((k) => k + 1);
         setStep("sql");
       }
       if (input === "c") {
         setResult(null);
         setRows(null);
+        setSql("");
+        setSqlInputKey((k) => k + 1);
         setSelectedChipIds([]);
         setStep("select-chips");
       }
@@ -138,6 +161,14 @@ export function RawQueryScreen({ defaultChipIds, onBack, onInputActive, isFocuse
 
   if (step === "sql") {
     const { metaMap: sqlMetaMap, index: sqlIndex } = chipDisplayConfig(chipsData, 0);
+    const tableRefs = buildTableRefs(chipsData?.chips ?? [], selectedChipIds);
+    const selectedRows = selectedChipIds.flatMap(
+      (id) => sqlIndex.chipsByChipId.get(id) ?? [],
+    );
+    const tableCount = new Set(selectedRows.map((c) => c.tableName)).size;
+    const subChipCount = new Set(selectedRows.map((c) => c.subChipId)).size;
+    const pickerVisible = Math.max(5, termRows - 16);
+    const previewWidth = Math.max(20, termCols - 50);
 
     return (
       <Box flexDirection="column" gap={1} paddingY={1}>
@@ -166,10 +197,51 @@ export function RawQueryScreen({ defaultChipIds, onBack, onInputActive, isFocuse
         <Box>
           <Text color={brand.violet}>{"❯ "}</Text>
           <TextInput
+            key={sqlInputKey}
             placeholder="SELECT * FROM s_<chip_id>.main.<table> ..."
+            defaultValue={sql}
+            onChange={setSql}
             onSubmit={handleExecute}
+            isDisabled={pickerOpen}
           />
         </Box>
+        {pickerOpen && (
+          <Box
+            flexDirection="column"
+            borderStyle="single"
+            borderColor={brand.border}
+            paddingX={1}
+          >
+            <Text color={brand.cyan} bold>
+              Insert table reference
+            </Text>
+            {tableRefs.length === 0 ? (
+              <Text color={brand.muted}>No tables found for the selected chips.</Text>
+            ) : (
+              <MenuSelect
+                visibleCount={pickerVisible}
+                options={tableRefs.map((ref, i) => ({
+                  label: ref.label,
+                  value: String(i),
+                  description:
+                    ref.sql.length > previewWidth
+                      ? ref.sql.slice(0, previewWidth - 1) + "…"
+                      : ref.sql,
+                }))}
+                onChange={(value) => insertTableRef(tableRefs[Number(value)]!.sql)}
+              />
+            )}
+            <Text color={brand.muted} dimColor>
+              enter:insert · esc:cancel
+            </Text>
+          </Box>
+        )}
+        {!pickerOpen && (
+          <Text color={brand.muted} dimColor>
+            {tableCount} table{tableCount !== 1 ? "s" : ""}, {subChipCount} sub-chip
+            {subChipCount !== 1 ? "s" : ""} — tab:insert table ref
+          </Text>
+        )}
         {error && <Text color={brand.error}>{error}</Text>}
       </Box>
     );

@@ -24,7 +24,7 @@ On launch, enter your DataLathe engine URL (e.g. `http://localhost:3000`) to con
 - Create chips from database queries or local files (CSV, Parquet, etc.)
 - Create a new chip from existing chips
 - Run SQL queries against chips
-- Run raw SQL directly against a chip's underlying catalog
+- Run raw SQL directly against a chip's underlying catalog, with a Tab picker that inserts table references (including UNION ALL across partitions)
 - Extract referenced tables from SQL
 - Manage, test, and re-attach saved database connections
 - Download engine and chip-manager binaries
