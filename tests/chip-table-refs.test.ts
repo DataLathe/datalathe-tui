@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Chip } from "@datalathe/client";
-import { buildTableRefs, appendRef } from "../src/utils/chip-table-refs.js";
+import { buildTableRefs, appendRef, catalogName } from "../src/utils/chip-table-refs.js";
 
 function row(chipId: string, subChipId: string, tableName: string, partitionValue = ""): Chip {
   return { chipId, subChipId, tableName, partitionValue };
@@ -10,7 +10,7 @@ describe("buildTableRefs", () => {
   it("produces a single catalog reference for a lone sub-chip", () => {
     const refs = buildTableRefs([row("c1", "sub-aaaa-1111", "orders")], ["c1"]);
     expect(refs).toEqual([
-      { label: "orders @ sub-aaaa", sql: "s_sub-aaaa-1111.main.orders" },
+      { label: "orders @ sub-aaaa", sql: "sub_aaaa_1111.main.orders" },
     ]);
   });
 
@@ -27,10 +27,10 @@ describe("buildTableRefs", () => {
     expect(refs).toEqual([
       {
         label: "orders (all 2 partitions)",
-        sql: "(SELECT * FROM s_s1.main.orders UNION ALL SELECT * FROM s_s2.main.orders)",
+        sql: "(SELECT * FROM s1.main.orders UNION ALL SELECT * FROM s2.main.orders)",
       },
-      { label: "orders @ a", sql: "s_s1.main.orders" },
-      { label: "orders @ b", sql: "s_s2.main.orders" },
+      { label: "orders @ a", sql: "s1.main.orders" },
+      { label: "orders @ b", sql: "s2.main.orders" },
     ]);
   });
 
@@ -56,12 +56,26 @@ describe("buildTableRefs", () => {
       [row("c1", "s1", "orders"), row("c2", "s2", "orders")],
       ["c1"],
     );
-    expect(refs).toEqual([{ label: "orders @ s1", sql: "s_s1.main.orders" }]);
+    expect(refs).toEqual([{ label: "orders @ s1", sql: "s1.main.orders" }]);
   });
 
   it("returns empty for no selection or no rows", () => {
     expect(buildTableRefs([], ["c1"])).toEqual([]);
     expect(buildTableRefs([row("c1", "s1", "t")], [])).toEqual([]);
+  });
+});
+
+describe("catalogName", () => {
+  it("replaces dashes and keeps no prefix for letter-leading ids", () => {
+    expect(catalogName("f9636cf0-1f23-4143-97ed-6d51bc2bfbe9")).toBe(
+      "f9636cf0_1f23_4143_97ed_6d51bc2bfbe9",
+    );
+  });
+
+  it("prefixes s_ for ids not starting with a letter", () => {
+    expect(catalogName("93a8a5fb-ff89-400f-8c73-b251966bdc5b")).toBe(
+      "s_93a8a5fb_ff89_400f_8c73_b251966bdc5b",
+    );
   });
 });
 
