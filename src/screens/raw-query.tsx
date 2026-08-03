@@ -177,7 +177,8 @@ export function RawQueryScreen({ defaultChipIds, onBack, onInputActive, isFocuse
         </Text>
         <Text color={brand.muted}>
           Runs read-only against the chip catalogs directly — no view layer.
-          Address tables as s_&lt;chip_id&gt;.main.&lt;table&gt;.
+          Catalog names are the sub-chip id with dashes as underscores; tab
+          inserts them for you.
         </Text>
         <Box flexDirection="column">
           {selectedChipIds.map((id) => {
@@ -198,7 +199,7 @@ export function RawQueryScreen({ defaultChipIds, onBack, onInputActive, isFocuse
           <Text color={brand.violet}>{"❯ "}</Text>
           <TextInput
             key={sqlInputKey}
-            placeholder="SELECT * FROM s_<chip_id>.main.<table> ..."
+            placeholder="SELECT * FROM <catalog>.main.<table> ...  (tab: insert table ref)"
             defaultValue={sql}
             onChange={setSql}
             onSubmit={handleExecute}
