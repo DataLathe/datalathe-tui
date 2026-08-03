@@ -60,6 +60,11 @@ const menuItems = [
     value: "download-binaries" as Screen,
     description: "Download engine and chip-manager",
   },
+  {
+    label: "Local Services",
+    value: "local-services" as Screen,
+    description: "Start, stop, and monitor the local engine and chip-manager",
+  },
 ];
 
 export function HomeScreen({ onNavigate, isFocused }: HomeScreenProps) {
