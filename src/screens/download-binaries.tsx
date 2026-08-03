@@ -14,7 +14,7 @@ import {
 } from "../utils/download.js";
 import { join, dirname } from "node:path";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
-import { homedir } from "node:os";
+import { binDir, licensePath } from "../utils/datalathe-paths.js";
 
 type Step =
   | "checking-license"
@@ -32,8 +32,8 @@ type Step =
 
 const INPUT_ACTIVE_STEPS: Step[] = ["license-key", "select-directory"];
 
-const DEFAULT_DIR = join(homedir(), ".datalathe", "bin");
-const DEFAULT_LICENSE_PATH = join(homedir(), ".datalathe", "config", "license.json");
+const DEFAULT_DIR = binDir;
+const DEFAULT_LICENSE_PATH = licensePath;
 
 function detectPlatform(): string {
   if (process.platform === "darwin" && process.arch === "arm64")

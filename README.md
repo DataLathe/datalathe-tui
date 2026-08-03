@@ -28,6 +28,7 @@ On launch, enter your DataLathe engine URL (e.g. `http://localhost:3000`) to con
 - Extract referenced tables from SQL
 - Manage, test, and re-attach saved database connections
 - Download engine and chip-manager binaries
+- Start and stop the local engine and chip-manager in the background (they keep running after the TUI exits)
 - View query results in a formatted table
 - Tab-completion for file paths
 

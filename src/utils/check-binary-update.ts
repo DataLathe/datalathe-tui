@@ -1,12 +1,7 @@
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { homedir } from "node:os";
 import { fetchVersions } from "./license-api.js";
 import { isNewerVersion } from "./check-update.js";
-
-const DEFAULT_BASE = join(homedir(), ".datalathe");
-const MANIFEST_PATH = join(DEFAULT_BASE, "bin", ".manifest.json");
-const LICENSE_PATH = join(DEFAULT_BASE, "config", "license.json");
+import { manifestPath, licensePath } from "./datalathe-paths.js";
 
 interface Manifest {
   version: string;
@@ -28,8 +23,8 @@ export interface BinaryUpdateInfo {
 export async function checkBinaryUpdate(): Promise<BinaryUpdateInfo | null> {
   try {
     const [manifestRaw, licenseRaw] = await Promise.all([
-      readFile(MANIFEST_PATH, "utf-8"),
-      readFile(LICENSE_PATH, "utf-8"),
+      readFile(manifestPath, "utf-8"),
+      readFile(licensePath, "utf-8"),
     ]);
 
     const manifest = JSON.parse(manifestRaw) as Manifest;
