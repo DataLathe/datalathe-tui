@@ -8,6 +8,7 @@ export type Screen =
   | "create-chip-from-chip"
   | "chip-detail"
   | "list-chips"
+  | "search-chips"
   | "query"
   | "raw-query"
   | "delete-chip"

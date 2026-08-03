@@ -1,27 +1,24 @@
-import React, { useState, useMemo } from "react";
-import { Box, Text, useInput } from "ink";
-import { Spinner } from "@inkjs/ui";
-import type { Chip, ChipMetadata, ChipTag } from "@datalathe/client";
+import React, { useState, useMemo, useEffect } from "react";
+import { Box, Text, useApp, useInput } from "ink";
+import { Spinner, TextInput } from "@inkjs/ui";
+import type { Chip, ChipMetadata } from "@datalathe/client";
 import { useClient } from "../hooks/use-client.js";
 import { useAsync } from "../hooks/use-async.js";
 import { useTerminalSize } from "../hooks/use-terminal-size.js";
 import { ErrorDisplay } from "../components/error-display.js";
+import { ChipRow } from "../components/chip-row.js";
 import { brand } from "../theme.js";
-import {
-  buildChipIndex,
-  formatDate,
-  subChipCount,
-  partitionSummary,
-  tagSummary,
-  fit,
-} from "../utils/chip-options.js";
+import { buildChipIndex } from "../utils/chip-options.js";
+import { filterChipIds } from "../utils/chip-filter.js";
 
 interface ListChipsScreenProps {
   onSelectChip: (chipId: string) => void;
   onQuery: (chipIds: string[]) => void;
   onRawQuery: (chipIds: string[]) => void;
   onCreateFromChip: (chipIds: string[]) => void;
+  onServerSearch: () => void;
   onBack: () => void;
+  onInputActive?: (active: boolean) => void;
   isFocused: boolean;
 }
 
@@ -30,10 +27,13 @@ export function ListChipsScreen({
   onQuery,
   onRawQuery,
   onCreateFromChip,
+  onServerSearch,
   onBack,
+  onInputActive,
   isFocused,
 }: ListChipsScreenProps) {
   const client = useClient();
+  const { exit } = useApp();
   const { rows } = useTerminalSize();
   const { data, loading, error, refetch } = useAsync(
     () => client.chips.list(),
@@ -43,6 +43,10 @@ export function ListChipsScreen({
   const [cursor, setCursor] = useState(0);
   const [scrollOffset, setScrollOffset] = useState(0);
   const [expandedChipId, setExpandedChipId] = useState<string | null>(null);
+  const [filterMode, setFilterMode] = useState(false);
+  const [filterText, setFilterText] = useState("");
+
+  const filterActive = filterText.trim().length > 0;
 
   const { mainChipIds, metaMap, index } = useMemo(() => {
     const allChips = data?.chips ?? [];
@@ -65,12 +69,57 @@ export function ListChipsScreen({
     return { mainChipIds, metaMap, index: idx };
   }, [data]);
 
+  const filteredIds = useMemo(
+    () => filterChipIds(mainChipIds, filterText, metaMap, index),
+    [mainChipIds, filterText, metaMap, index],
+  );
+
   // Reserve lines for header, footer, borders
   const maxVisible = Math.max(3, rows - 8);
+
+  useEffect(() => {
+    setCursor((c) => Math.min(c, Math.max(0, filteredIds.length - 1)));
+    setScrollOffset((s) =>
+      Math.max(0, Math.min(s, Math.max(0, filteredIds.length - maxVisible))),
+    );
+  }, [filteredIds.length, maxVisible]);
+
+  // Suppress App's global q/b/esc while filtering so esc clears the filter
+  // instead of navigating back; b and q are re-handled locally below.
+  useEffect(() => {
+    onInputActive?.(filterMode || filterActive);
+    return () => onInputActive?.(false);
+  }, [filterMode, filterActive, onInputActive]);
 
   useInput(
     (input, key) => {
       if (!isFocused) return;
+
+      if (filterMode) {
+        if (key.escape) {
+          setFilterText("");
+          setFilterMode(false);
+        }
+        return;
+      }
+
+      if (input === "/") {
+        setFilterMode(true);
+        return;
+      }
+
+      if (filterActive && key.escape) {
+        setFilterText("");
+        return;
+      }
+      if (filterActive && input === "b") {
+        onBack();
+        return;
+      }
+      if (filterActive && input === "q") {
+        exit();
+        return;
+      }
 
       if (key.upArrow) {
         setCursor((c) => {
@@ -80,28 +129,30 @@ export function ListChipsScreen({
         });
       } else if (key.downArrow) {
         setCursor((c) => {
-          const next = Math.min(mainChipIds.length - 1, c + 1);
+          const next = Math.min(filteredIds.length - 1, c + 1);
           if (next >= scrollOffset + maxVisible)
             setScrollOffset(next - maxVisible + 1);
           return next;
         });
       } else if (key.return) {
-        const chipId = mainChipIds[cursor];
+        const chipId = filteredIds[cursor];
         if (chipId) {
           setExpandedChipId((prev) => (prev === chipId ? null : chipId));
         }
       } else if (input === "v") {
-        const chipId = mainChipIds[cursor];
+        const chipId = filteredIds[cursor];
         if (chipId) onSelectChip(chipId);
       } else if (input === "s") {
-        const chipId = mainChipIds[cursor];
+        const chipId = filteredIds[cursor];
         if (chipId) onQuery([chipId]);
       } else if (input === "x") {
-        const chipId = mainChipIds[cursor];
+        const chipId = filteredIds[cursor];
         if (chipId) onRawQuery([chipId]);
       } else if (input === "c") {
-        const chipId = mainChipIds[cursor];
+        const chipId = filteredIds[cursor];
         if (chipId) onCreateFromChip([chipId]);
+      } else if (input === "f") {
+        onServerSearch();
       } else if (input === "r") {
         refetch();
       }
@@ -128,7 +179,7 @@ export function ListChipsScreen({
     );
   }
 
-  const visibleIds = mainChipIds.slice(
+  const visibleIds = filteredIds.slice(
     scrollOffset,
     scrollOffset + maxVisible,
   );
@@ -140,175 +191,78 @@ export function ListChipsScreen({
           Chips{" "}
         </Text>
         <Text color={brand.muted}>
-          {mainChipIds.length} chip
-          {mainChipIds.length !== 1 ? "s" : ""}
+          {filterActive
+            ? `${filteredIds.length} of ${mainChipIds.length} chips`
+            : `${mainChipIds.length} chip${mainChipIds.length !== 1 ? "s" : ""}`}
         </Text>
       </Box>
 
-      {visibleIds.map((chipId, i) => {
-        const globalIdx = scrollOffset + i;
-        const isCursor = globalIdx === cursor;
-        const isExpanded = expandedChipId === chipId;
-        const meta = metaMap.get(chipId);
-        const subs = subChipCount(chipId, index);
-        const chips = index.chipsByChipId.get(chipId) ?? [];
-        const tables = [
-          ...new Set(chips.map((c: Chip) => c.tableName)),
-        ];
-        const chipTags = index.tagsByChipId.get(chipId) ?? [];
+      {filterMode && (
+        <Box marginBottom={1}>
+          <Text color={brand.violet}>{"/ "}</Text>
+          <TextInput
+            placeholder="filter chips"
+            defaultValue={filterText}
+            onChange={setFilterText}
+            onSubmit={(v) => {
+              setFilterText(v);
+              setFilterMode(false);
+            }}
+          />
+        </Box>
+      )}
 
-        return (
-          <Box key={chipId} flexDirection="column">
-            {/* Summary row */}
-            <Box>
-              <Text color={isCursor ? brand.cyan : brand.muted}>
-                {isCursor ? "\u25B6 " : "  "}
-              </Text>
-              <Text color={isCursor ? brand.cyan : brand.text} bold={isCursor}>
-                {fit(meta?.name ?? chipId.slice(0, 12), 22)}
-              </Text>
-              <Text color={brand.muted}>  </Text>
-              <Text color={brand.violet}>
-                {fit(tables.join(", ") || "-", 18)}
-              </Text>
-              <Text color={brand.muted}>  </Text>
-              <Text color={brand.muted}>
-                {meta ? formatDate(meta.createdAt) : "-"}
-              </Text>
-              <Text color={brand.muted}>  </Text>
-              <Text color={brand.indigo}>
-                {subs > 0 ? `${subs} sub${subs !== 1 ? "s" : ""}` : ""}
-              </Text>
-              {chipTags.length > 0 && (
-                <>
-                  <Text color={brand.muted}>  </Text>
-                  <Text color={brand.muted} dimColor>
-                    {chipTags.map((t: ChipTag) => `${t.key}=${t.value}`).join(" ")}
-                  </Text>
-                </>
-              )}
-            </Box>
-
-            {/* Expanded detail */}
-            {isExpanded && (
-              <Box
-                flexDirection="column"
-                paddingLeft={4}
-                marginBottom={1}
-                borderStyle="single"
-                borderColor={brand.border}
-                paddingX={1}
-              >
-                <Text>
-                  <Text color={brand.muted}>ID:      </Text>
-                  <Text color={brand.text}>{chipId}</Text>
-                </Text>
-                {meta?.name && (
-                  <Text>
-                    <Text color={brand.muted}>Name:    </Text>
-                    <Text color={brand.text}>{meta.name}</Text>
-                  </Text>
-                )}
-                {meta?.description && (
-                  <Text>
-                    <Text color={brand.muted}>Desc:    </Text>
-                    <Text color={brand.text}>{meta.description}</Text>
-                  </Text>
-                )}
-                {meta?.query && (
-                  <Text>
-                    <Text color={brand.muted}>Query:   </Text>
-                    <Text color={brand.violet}>{meta.query}</Text>
-                  </Text>
-                )}
-                <Text>
-                  <Text color={brand.muted}>Tables:  </Text>
-                  <Text color={brand.violet}>
-                    {tables.join(", ") || "-"}
-                  </Text>
-                </Text>
-                {meta?.tables && (
-                  <Text>
-                    <Text color={brand.muted}>Sources: </Text>
-                    <Text color={brand.text}>{meta.tables}</Text>
-                  </Text>
-                )}
-                <Text>
-                  <Text color={brand.muted}>Created: </Text>
-                  <Text color={brand.text}>
-                    {meta
-                      ? new Date(meta.createdAt * 1000).toLocaleString()
-                      : "-"}
-                  </Text>
-                </Text>
-                {subs > 0 && (
-                  <Text>
-                    <Text color={brand.muted}>Subs:    </Text>
-                    <Text color={brand.text}>
-                      {subs} partition{subs !== 1 ? "s" : ""} ({partitionSummary(chipId, index)})
-                    </Text>
-                  </Text>
-                )}
-                {chipTags.length > 0 && (
-                  <Box flexDirection="column">
-                    <Text color={brand.muted}>Tags:</Text>
-                    {chipTags.map((t: ChipTag) => (
-                      <Text key={t.key}>
-                        <Text color={brand.muted}>  {t.key}: </Text>
-                        <Text color={brand.text}>{t.value}</Text>
-                      </Text>
-                    ))}
-                  </Box>
-                )}
-                {meta?.storageBucket && (
-                  <Text>
-                    <Text color={brand.muted}>Storage: </Text>
-                    <Text color={brand.text}>
-                      s3://{meta.storageBucket}
-                      {meta.storageKeyPrefix
-                        ? `/${meta.storageKeyPrefix}`
-                        : ""}
-                    </Text>
-                  </Text>
-                )}
-                {meta?.ttlDays != null && (
-                  <Text>
-                    <Text color={brand.muted}>TTL:     </Text>
-                    <Text color={brand.text}>{meta.ttlDays} days</Text>
-                  </Text>
-                )}
-
-                <Box marginTop={1} gap={2}>
-                  <Text color={brand.muted}>v:full detail</Text>
-                  <Text color={brand.muted}>s:query</Text>
-                  <Text color={brand.muted}>x:raw sql</Text>
-                  <Text color={brand.muted}>c:create from chip</Text>
-                </Box>
-              </Box>
-            )}
-          </Box>
-        );
-      })}
+      {filteredIds.length === 0 ? (
+        <Text color={brand.muted}>No chips match "{filterText.trim()}".</Text>
+      ) : (
+        visibleIds.map((chipId, i) => (
+          <ChipRow
+            key={chipId}
+            chipId={chipId}
+            meta={metaMap.get(chipId)}
+            index={index}
+            isCursor={scrollOffset + i === cursor}
+            isExpanded={expandedChipId === chipId}
+          />
+        ))
+      )}
 
       {/* Scroll indicator */}
-      {mainChipIds.length > maxVisible && (
+      {filteredIds.length > maxVisible && (
         <Text color={brand.muted}>
           {" "}
-          {scrollOffset > 0 ? "\u2191" : " "} {scrollOffset + 1}-
-          {Math.min(scrollOffset + maxVisible, mainChipIds.length)}/
-          {mainChipIds.length}{" "}
-          {scrollOffset + maxVisible < mainChipIds.length ? "\u2193" : " "}
+          {scrollOffset > 0 ? "↑" : " "} {scrollOffset + 1}-
+          {Math.min(scrollOffset + maxVisible, filteredIds.length)}/
+          {filteredIds.length}{" "}
+          {scrollOffset + maxVisible < filteredIds.length ? "↓" : " "}
         </Text>
       )}
 
-      <Box marginTop={1} gap={2}>
-        <Text color={brand.muted}>enter:expand</Text>
-        <Text color={brand.muted}>v:full detail</Text>
-        <Text color={brand.muted}>s:query</Text>
-        <Text color={brand.muted}>x:raw sql</Text>
-        <Text color={brand.muted}>c:create from chip</Text>
-        <Text color={brand.muted}>r:refresh</Text>
-        <Text color={brand.muted}>b:back</Text>
+      <Box marginTop={1} gap={2} flexWrap="wrap">
+        {filterMode ? (
+          <>
+            <Text color={brand.muted}>enter:apply</Text>
+            <Text color={brand.muted}>esc:clear</Text>
+          </>
+        ) : (
+          <>
+            <Text color={brand.muted}>enter:expand</Text>
+            <Text color={brand.muted}>v:full detail</Text>
+            <Text color={brand.muted}>s:query</Text>
+            <Text color={brand.muted}>x:raw sql</Text>
+            <Text color={brand.muted}>c:create from chip</Text>
+            <Text color={brand.muted}>/:filter</Text>
+            <Text color={brand.muted}>f:server search</Text>
+            <Text color={brand.muted}>r:refresh</Text>
+            <Text color={brand.muted}>b:back</Text>
+            {filterActive && (
+              <>
+                <Text color={brand.cyan}>filter:"{filterText.trim()}"</Text>
+                <Text color={brand.muted}>esc:clear</Text>
+              </>
+            )}
+          </>
+        )}
       </Box>
     </Box>
   );

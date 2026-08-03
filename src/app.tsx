@@ -20,6 +20,7 @@ import { ExtractTablesScreen } from "./screens/extract-tables.js";
 import { ConnectionsScreen } from "./screens/connections.js";
 import { DownloadBinariesScreen } from "./screens/download-binaries.js";
 import { ListChipsScreen } from "./screens/list-chips.js";
+import { SearchChipsScreen } from "./screens/search-chips.js";
 import { brand } from "./theme.js";
 
 const SCREEN_TITLES: Record<string, string> = {
@@ -30,6 +31,7 @@ const SCREEN_TITLES: Record<string, string> = {
   "create-chip-from-chip": "Create Chip from Chip",
   "chip-detail": "Chip Detail",
   "list-chips": "List Chips",
+  "search-chips": "Search Chips",
   query: "Query Chips",
   "delete-chip": "Delete Chip",
   "extract-tables": "Extract Tables",
@@ -172,7 +174,21 @@ export function App({ url }: AppProps) {
             onQuery={(chipIds) => navigate("query", { queryChipIds: chipIds })}
             onRawQuery={(chipIds) => navigate("raw-query", { queryChipIds: chipIds })}
             onCreateFromChip={(chipIds) => navigate("create-chip-from-chip", { sourceChipIds: chipIds })}
+            onServerSearch={() => navigate("search-chips")}
             onBack={goBack}
+            onInputActive={setInputActive}
+            isFocused={mainFocused}
+          />
+        );
+      case "search-chips":
+        return (
+          <SearchChipsScreen
+            onSelectChip={(chipId) => navigate("chip-detail", { chipId })}
+            onQuery={(chipIds) => navigate("query", { queryChipIds: chipIds })}
+            onRawQuery={(chipIds) => navigate("raw-query", { queryChipIds: chipIds })}
+            onCreateFromChip={(chipIds) => navigate("create-chip-from-chip", { sourceChipIds: chipIds })}
+            onBack={goBack}
+            onInputActive={setInputActive}
             isFocused={mainFocused}
           />
         );
