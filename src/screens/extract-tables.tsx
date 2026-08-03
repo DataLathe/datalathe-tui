@@ -71,12 +71,12 @@ export function ExtractTablesScreen({ onBack, onInputActive, isFocused }: Extrac
           Extract Tables
         </Text>
         <Text color={brand.muted}>
-          Transform MySQL/MariaDB syntax to DuckDB before extracting?
+          Transform MySQL/MariaDB syntax for the DataLathe engine before extracting?
         </Text>
         <MenuSelect
           options={[
             { label: "No", value: "no", description: "Parse query as-is" },
-            { label: "Yes", value: "yes", description: "Transform MySQL/MariaDB → DuckDB" },
+            { label: "Yes", value: "yes", description: "Transform MySQL/MariaDB → engine dialect" },
           ]}
           isDisabled={!isFocused}
           onChange={(value) => {
