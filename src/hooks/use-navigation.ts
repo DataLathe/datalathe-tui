@@ -14,7 +14,8 @@ export type Screen =
   | "delete-chip"
   | "extract-tables"
   | "connections"
-  | "download-binaries";
+  | "download-binaries"
+  | "local-services";
 
 export interface NavigationState {
   screen: Screen;

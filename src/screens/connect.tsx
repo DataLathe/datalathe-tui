@@ -8,6 +8,11 @@ import { brand } from "../theme.js";
 import { currentVersion } from "../utils/check-update.js";
 import { useUpdateCheck } from "../hooks/use-update-check.js";
 import { useBinaryUpdateCheck } from "../hooks/use-binary-update-check.js";
+import {
+  isLocalUrl,
+  binariesInstalled,
+  startServices,
+} from "../utils/local-services.js";
 
 /** Request timeout in ms. Create-chip can take minutes. */
 const CLIENT_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
@@ -22,12 +27,19 @@ export function ConnectScreen({ initialUrl, onConnect, onDownload }: ConnectScre
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [targetUrl, setTargetUrl] = useState(initialUrl);
+  const [offerLocalStart, setOfferLocalStart] = useState(false);
+  const [startingLocal, setStartingLocal] = useState(false);
+  const [startProgress, setStartProgress] = useState<string | null>(null);
   const update = useUpdateCheck();
   const binaryUpdate = useBinaryUpdateCheck();
 
   useInput((input) => {
-    if (!connecting && input === "d" && onDownload) {
+    if (connecting || startingLocal) return;
+    if (input === "d" && onDownload) {
       onDownload();
+    }
+    if (input === "s" && offerLocalStart) {
+      handleStartLocal();
     }
   });
 
@@ -36,6 +48,7 @@ export function ConnectScreen({ initialUrl, onConnect, onDownload }: ConnectScre
     setTargetUrl(url);
     setConnecting(true);
     setError(null);
+    setOfferLocalStart(false);
 
     try {
       const devKey = process.env.DATALATHE_DEV_KEY;
@@ -51,7 +64,31 @@ export function ConnectScreen({ initialUrl, onConnect, onDownload }: ConnectScre
         err instanceof Error ? err.message : "Connection failed",
       );
       setConnecting(false);
+      if (isLocalUrl(url) && (await binariesInstalled())) {
+        setOfferLocalStart(true);
+      }
     }
+  };
+
+  const handleStartLocal = async () => {
+    setStartingLocal(true);
+    setError(null);
+    const results = await startServices(setStartProgress);
+    setStartProgress(null);
+    setStartingLocal(false);
+    const failed = results.filter((r) => !r.ok);
+    if (failed.length > 0) {
+      setError(
+        failed
+          .map((r) =>
+            [`${r.name}: ${r.message}`, ...r.logTail.slice(-3).map((l) => `  ${l}`)].join("\n"),
+          )
+          .join("\n"),
+      );
+      return;
+    }
+    setOfferLocalStart(false);
+    handleSubmit(targetUrl);
   };
 
   return (
@@ -74,6 +111,8 @@ export function ConnectScreen({ initialUrl, onConnect, onDownload }: ConnectScre
         </Text>
         {connecting ? (
           <Spinner label={`Connecting to ${targetUrl}...`} />
+        ) : startingLocal ? (
+          <Spinner label={startProgress ?? "Starting local services..."} />
         ) : (
           <Box>
             <Text color={brand.violet}>{"❯ "}</Text>
@@ -86,6 +125,11 @@ export function ConnectScreen({ initialUrl, onConnect, onDownload }: ConnectScre
         )}
         {error && (
           <Text color={brand.error}>{error}</Text>
+        )}
+        {offerLocalStart && !startingLocal && (
+          <Text color={brand.cyan}>
+            Local binaries installed — press <Text bold>s</Text> to start engine + chip-manager and retry
+          </Text>
         )}
         <Text color={brand.muted} dimColor>
           Press Enter to connect · d to download binaries

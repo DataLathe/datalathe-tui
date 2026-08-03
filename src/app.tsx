@@ -21,6 +21,7 @@ import { ConnectionsScreen } from "./screens/connections.js";
 import { DownloadBinariesScreen } from "./screens/download-binaries.js";
 import { ListChipsScreen } from "./screens/list-chips.js";
 import { SearchChipsScreen } from "./screens/search-chips.js";
+import { LocalServicesScreen } from "./screens/local-services.js";
 import { brand } from "./theme.js";
 
 const SCREEN_TITLES: Record<string, string> = {
@@ -37,6 +38,7 @@ const SCREEN_TITLES: Record<string, string> = {
   "extract-tables": "Extract Tables",
   connections: "Connections",
   "download-binaries": "Download Binaries",
+  "local-services": "Local Services",
 };
 
 interface AppProps {
@@ -249,6 +251,13 @@ export function App({ url }: AppProps) {
           <DownloadBinariesScreen
             onBack={goBack}
             onInputActive={setInputActive}
+            isFocused={mainFocused}
+          />
+        );
+      case "local-services":
+        return (
+          <LocalServicesScreen
+            onDownload={() => navigate("download-binaries")}
             isFocused={mainFocused}
           />
         );
