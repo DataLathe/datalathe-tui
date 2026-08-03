@@ -16,6 +16,11 @@ const menuItems = [
     description: "Browse chips and inspect metadata, queries, and tags",
   },
   {
+    label: "Search Chips",
+    value: "search-chips" as Screen,
+    description: "Search chips on the server by table, partition, or tag",
+  },
+  {
     label: "Create Chip",
     value: "create-chip" as Screen,
     description: "Stage data from a source into a new chip",
