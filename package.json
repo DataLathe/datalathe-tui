@@ -1,6 +1,6 @@
 {
   "name": "@datalathe/tui",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "DataLathe Terminal UI",
   "type": "module",
   "main": "./dist/cli.js",
@@ -20,7 +20,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@datalathe/client": "^1.12.0",
+    "@datalathe/client": "1.13.0",
     "@inkjs/ui": "^2.0.0",
     "ink": "^6.0.0",
     "react": "^19.0.0"
