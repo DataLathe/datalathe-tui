@@ -34,8 +34,12 @@ On launch, enter your DataLathe engine URL (e.g. `http://localhost:3000`) to con
 
 ## Requirements
 
-- Node.js >= 18
+- Node.js >= 20
 - A running DataLathe engine
+
+### Corporate CA / TLS inspection
+
+The TUI trusts your operating system's certificate store automatically. If your network performs TLS inspection with a private CA, set `DATALATHE_CA_BUNDLE` to the path of a PEM bundle containing that CA (or use Node's `NODE_EXTRA_CA_CERTS`) before launching.
 
 ## License
 
