@@ -6,7 +6,7 @@ import { useAsync } from "../hooks/use-async.js";
 import { FilePathInput } from "../components/file-path-input.js";
 import { MenuSelect } from "../components/menu-select.js";
 import { brand } from "../theme.js";
-import type { DuckDBDatabase, Partition, S3StorageConfig } from "@datalathe/client";
+import type { DatabaseInfo, Partition, S3StorageConfig } from "@datalathe/client";
 
 type Step =
   | "choose-source"
@@ -716,12 +716,12 @@ function DatabaseSelect({ onSelect, isFocused = true }: { onSelect: (db: string)
   if (loading) return <Spinner label="Loading databases..." />;
   if (error) return <Text color={brand.error}>{error}</Text>;
 
-  const databases = (data ?? []).filter((db: DuckDBDatabase) => !db.internal);
+  const databases = (data ?? []).filter((db: DatabaseInfo) => !db.internal);
   if (databases.length === 0) {
     return <Text color={brand.muted}>No databases found.</Text>;
   }
 
-  const options = databases.map((db: DuckDBDatabase) => ({
+  const options = databases.map((db: DatabaseInfo) => ({
     label: db.databaseName,
     value: db.databaseName,
   }));

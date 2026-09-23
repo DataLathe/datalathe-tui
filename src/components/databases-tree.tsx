@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Box, Text, useInput } from "ink";
 import { Spinner } from "@inkjs/ui";
-import type { DatalatheClient, DuckDBDatabase, DatabaseTable } from "@datalathe/client";
+import type { DatalatheClient, DatabaseInfo, DatabaseTable } from "@datalathe/client";
 import { brand } from "../theme.js";
 
 interface TreeNode {
@@ -19,7 +19,7 @@ interface DatabasesTreeProps {
 }
 
 export function DatabasesTree({ client, isFocused, onSelectTable, height }: DatabasesTreeProps) {
-  const [databases, setDatabases] = useState<DuckDBDatabase[]>([]);
+  const [databases, setDatabases] = useState<DatabaseInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [schemas, setSchemas] = useState<Map<string, DatabaseTable[]>>(new Map());
