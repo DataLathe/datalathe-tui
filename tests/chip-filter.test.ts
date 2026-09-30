@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Chip, ChipMetadata, ChipTag } from "@datalathe/client";
-import { chipMatchesFilter, filterChipIds } from "../src/utils/chip-filter.js";
+import { chipMatchesFilter, filterChipIds, tagSearchParam } from "../src/utils/chip-filter.js";
 import { buildChipIndex } from "../src/utils/chip-options.js";
 
 const chips: Chip[] = [
@@ -73,5 +73,12 @@ describe("filterChipIds", () => {
 
   it("returns empty when nothing matches", () => {
     expect(filterChipIds(ids, "nope", metaMap, index)).toEqual([]);
+  });
+});
+
+describe("tagSearchParam", () => {
+  it("uses the key:value wire format and passes values with colons and wildcards through", () => {
+    expect(tagSearchParam("tenant", "599")).toBe("tenant:599");
+    expect(tagSearchParam("tenant", "599:cmp*")).toBe("tenant:599:cmp*");
   });
 });

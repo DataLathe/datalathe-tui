@@ -9,6 +9,7 @@ import { MenuSelect } from "../components/menu-select.js";
 import { ChipRow } from "../components/chip-row.js";
 import { brand } from "../theme.js";
 import { buildChipIndex } from "../utils/chip-options.js";
+import { tagSearchParam } from "../utils/chip-filter.js";
 
 type Step =
   | "table"
@@ -76,7 +77,7 @@ export function SearchChipsScreen({
     setStep("searching");
     setError(null);
     try {
-      const tag = tagKey ? `${tagKey}=${tagValue}` : undefined;
+      const tag = tagKey ? tagSearchParam(tagKey, tagValue) : undefined;
       const res = await client.chips.search(
         tableName || undefined,
         partitionValue || undefined,
@@ -229,7 +230,7 @@ export function SearchChipsScreen({
 
       {step === "tag-value" && (
         <Box flexDirection="column" gap={1}>
-          <Text color={brand.text}>Tag value (Enter to skip):</Text>
+          <Text color={brand.text}>Tag value, * for wildcard (Enter to skip):</Text>
           <Box>
             <Text color={brand.violet}>{"❯ "}</Text>
             <TextInput
