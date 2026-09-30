@@ -33,3 +33,8 @@ export function filterChipIds(
     chipMatchesFilter(filter, id, metaMap.get(id), index),
   );
 }
+
+/** Server search expects `key:value`; `*` in the value is a wildcard. */
+export function tagSearchParam(key: string, value: string): string {
+  return `${key}:${value}`;
+}
