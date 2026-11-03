@@ -238,6 +238,7 @@ export function ChipDetailScreen({
         <Text color={brand.muted}>x:raw sql</Text>
         <Text color={brand.muted}>c:create from chip</Text>
         <Text color={brand.muted}>d:delete</Text>
+        {meta?.correlationId && <Text color={brand.muted}>t:trace</Text>}
         <Text color={brand.muted}>b:back</Text>
       </Box>
     </Box>
