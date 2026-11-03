@@ -21,6 +21,7 @@ interface ChipDetailScreenProps {
   onQuery: (chipIds: string[]) => void;
   onRawQuery: (chipIds: string[]) => void;
   onCreateFromChip: (chipIds: string[]) => void;
+  onTrace: (correlationId: string) => void;
   onBack: () => void;
   onDeleted: () => void;
   isFocused: boolean;
@@ -32,6 +33,7 @@ export function ChipDetailScreen({
   onQuery,
   onRawQuery,
   onCreateFromChip,
+  onTrace,
   onBack,
   onDeleted,
   isFocused,
@@ -95,6 +97,8 @@ export function ChipDetailScreen({
       onCreateFromChip(ids);
     } else if (input === "d") {
       setDeleteState({ phase: "confirming" });
+    } else if (input === "t" && meta?.correlationId) {
+      onTrace(meta.correlationId);
     }
   }, { isActive: isFocused });
 
@@ -149,6 +153,12 @@ export function ChipDetailScreen({
               {new Date(meta.createdAt * 1000).toLocaleString()}
             </Text>
           </Text>
+          {meta.correlationId && (
+            <Text>
+              <Text color={brand.muted}>Correlation: </Text>
+              <Text color={brand.text}>{meta.correlationId}</Text>
+            </Text>
+          )}
         </Box>
       )}
 
@@ -228,6 +238,7 @@ export function ChipDetailScreen({
         <Text color={brand.muted}>x:raw sql</Text>
         <Text color={brand.muted}>c:create from chip</Text>
         <Text color={brand.muted}>d:delete</Text>
+        {meta?.correlationId && <Text color={brand.muted}>t:trace</Text>}
         <Text color={brand.muted}>b:back</Text>
       </Box>
     </Box>

@@ -21,6 +21,11 @@ const menuItems = [
     description: "Search chips on the server by table, partition, or tag",
   },
   {
+    label: "Trace Run",
+    value: "trace" as Screen,
+    description: "Jobs and chips for one correlation ID",
+  },
+  {
     label: "Create Chip",
     value: "create-chip" as Screen,
     description: "Stage data from a source into a new chip",

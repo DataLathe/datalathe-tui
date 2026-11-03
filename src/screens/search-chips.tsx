@@ -16,12 +16,13 @@ type Step =
   | "partition"
   | "tag-key"
   | "tag-value"
+  | "correlation"
   | "confirm"
   | "searching"
   | "error"
   | "results";
 
-const INPUT_STEPS: Step[] = ["table", "partition", "tag-key", "tag-value"];
+const INPUT_STEPS: Step[] = ["table", "partition", "tag-key", "tag-value", "correlation"];
 
 interface SearchChipsScreenProps {
   onSelectChip: (chipId: string) => void;
@@ -50,6 +51,7 @@ export function SearchChipsScreen({
   const [partitionValue, setPartitionValue] = useState("");
   const [tagKey, setTagKey] = useState("");
   const [tagValue, setTagValue] = useState("");
+  const [correlationId, setCorrelationId] = useState("");
   const [validation, setValidation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<ChipsResponse | null>(null);
@@ -64,7 +66,7 @@ export function SearchChipsScreen({
   }, [step, onInputActive]);
 
   const validate = (): string | null => {
-    if (!tableName && !partitionValue && !tagKey && !tagValue) {
+    if (!tableName && !partitionValue && !tagKey && !tagValue && !correlationId) {
       return "Enter at least one search field.";
     }
     if ((tagKey && !tagValue) || (!tagKey && tagValue)) {
@@ -82,6 +84,7 @@ export function SearchChipsScreen({
         tableName || undefined,
         partitionValue || undefined,
         tag,
+        correlationId || undefined,
       );
       setResults(res);
       setCursor(0);
@@ -167,6 +170,7 @@ export function SearchChipsScreen({
     tableName && `table=${tableName}`,
     partitionValue && `partition=${partitionValue}`,
     tagKey && `tag=${tagKey}=${tagValue}`,
+    correlationId && `correlation=${correlationId}`,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -238,6 +242,23 @@ export function SearchChipsScreen({
               defaultValue={tagValue}
               onSubmit={(v) => {
                 setTagValue(v.trim());
+                setStep("correlation");
+              }}
+            />
+          </Box>
+        </Box>
+      )}
+
+      {step === "correlation" && (
+        <Box flexDirection="column" gap={1}>
+          <Text color={brand.text}>Correlation ID (Enter to skip):</Text>
+          <Box>
+            <Text color={brand.violet}>{"❯ "}</Text>
+            <TextInput
+              placeholder="6f1c0a2e-..."
+              defaultValue={correlationId}
+              onSubmit={(v) => {
+                setCorrelationId(v.trim());
                 setValidation(null);
                 setStep("confirm");
               }}
@@ -262,6 +283,10 @@ export function SearchChipsScreen({
               <Text color={brand.text}>
                 {tagKey || tagValue ? `${tagKey}=${tagValue}` : "Any"}
               </Text>
+            </Text>
+            <Text>
+              <Text color={brand.muted}>Correlation</Text>
+              <Text color={brand.text}>{correlationId || "Any"}</Text>
             </Text>
           </Box>
           {validation && <Text color={brand.error}>{validation}</Text>}

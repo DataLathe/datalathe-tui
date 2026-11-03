@@ -21,6 +21,7 @@ import { ConnectionsScreen } from "./screens/connections.js";
 import { DownloadBinariesScreen } from "./screens/download-binaries.js";
 import { ListChipsScreen } from "./screens/list-chips.js";
 import { SearchChipsScreen } from "./screens/search-chips.js";
+import { TraceScreen } from "./screens/trace.js";
 import { LocalServicesScreen } from "./screens/local-services.js";
 import { brand } from "./theme.js";
 
@@ -33,6 +34,7 @@ const SCREEN_TITLES: Record<string, string> = {
   "chip-detail": "Chip Detail",
   "list-chips": "List Chips",
   "search-chips": "Search Chips",
+  trace: "Trace Run",
   query: "Query Chips",
   "delete-chip": "Delete Chip",
   "extract-tables": "Extract Tables",
@@ -164,6 +166,7 @@ export function App({ url }: AppProps) {
             onQuery={(chipIds) => navigate("query", { queryChipIds: chipIds })}
             onRawQuery={(chipIds) => navigate("raw-query", { queryChipIds: chipIds })}
             onCreateFromChip={(chipIds) => navigate("create-chip-from-chip", { sourceChipIds: chipIds })}
+            onTrace={(correlationId) => navigate("trace", { correlationId })}
             onBack={goBack}
             onDeleted={handleChipDeleted}
             isFocused={mainFocused}
@@ -189,6 +192,18 @@ export function App({ url }: AppProps) {
             onQuery={(chipIds) => navigate("query", { queryChipIds: chipIds })}
             onRawQuery={(chipIds) => navigate("raw-query", { queryChipIds: chipIds })}
             onCreateFromChip={(chipIds) => navigate("create-chip-from-chip", { sourceChipIds: chipIds })}
+            onBack={goBack}
+            onInputActive={setInputActive}
+            isFocused={mainFocused}
+          />
+        );
+      case "trace":
+        return (
+          <TraceScreen
+            initialCorrelationId={current.params.correlationId as string | undefined}
+            onSelectChip={(chipId) => navigate("chip-detail", { chipId })}
+            onQuery={(chipIds) => navigate("query", { queryChipIds: chipIds })}
+            onRawQuery={(chipIds) => navigate("raw-query", { queryChipIds: chipIds })}
             onBack={goBack}
             onInputActive={setInputActive}
             isFocused={mainFocused}
