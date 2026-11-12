@@ -21,6 +21,7 @@ import { ConnectionsScreen } from "./screens/connections.js";
 import { DownloadBinariesScreen } from "./screens/download-binaries.js";
 import { ListChipsScreen } from "./screens/list-chips.js";
 import { SearchChipsScreen } from "./screens/search-chips.js";
+import { BrowseSeriesScreen } from "./screens/browse-series.js";
 import { TraceScreen } from "./screens/trace.js";
 import { LocalServicesScreen } from "./screens/local-services.js";
 import { brand } from "./theme.js";
@@ -34,6 +35,7 @@ const SCREEN_TITLES: Record<string, string> = {
   "chip-detail": "Chip Detail",
   "list-chips": "List Chips",
   "search-chips": "Search Chips",
+  "browse-series": "Browse Series",
   trace: "Trace Run",
   query: "Query Chips",
   "delete-chip": "Delete Chip",
@@ -192,6 +194,16 @@ export function App({ url }: AppProps) {
             onQuery={(chipIds) => navigate("query", { queryChipIds: chipIds })}
             onRawQuery={(chipIds) => navigate("raw-query", { queryChipIds: chipIds })}
             onCreateFromChip={(chipIds) => navigate("create-chip-from-chip", { sourceChipIds: chipIds })}
+            onBack={goBack}
+            onInputActive={setInputActive}
+            isFocused={mainFocused}
+          />
+        );
+      case "browse-series":
+        return (
+          <BrowseSeriesScreen
+            onSelectChip={(chipId) => navigate("chip-detail", { chipId })}
+            onQuery={(references) => navigate("query", { queryChipIds: references })}
             onBack={goBack}
             onInputActive={setInputActive}
             isFocused={mainFocused}

@@ -9,6 +9,7 @@ export type Screen =
   | "chip-detail"
   | "list-chips"
   | "search-chips"
+  | "browse-series"
   | "trace"
   | "query"
   | "raw-query"

@@ -21,6 +21,11 @@ const menuItems = [
     description: "Search chips on the server by table, partition, or tag",
   },
   {
+    label: "Browse Series",
+    value: "browse-series" as Screen,
+    description: "Tables and partitions of a series, without chip IDs",
+  },
+  {
     label: "Trace Run",
     value: "trace" as Screen,
     description: "Jobs and chips for one correlation ID",
