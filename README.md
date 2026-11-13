@@ -21,6 +21,7 @@ On launch, enter your DataLathe engine URL (e.g. `http://localhost:3000`) to con
 - Browse databases and table schemas
 - Filter the chip list as you type (press `/`) by name, ID, table, or tag
 - Search chips server-side by table name, partition value, or tag
+- Browse series: list a series' tables and partitions, then query a table, a partition, or the whole series by reference (engine 1.24.0 or later)
 - Create chips from database queries or local files (CSV, Parquet, etc.)
 - Create a new chip from existing chips
 - Run SQL queries against chips
